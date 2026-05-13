@@ -14,6 +14,8 @@
   --text:         #1a1a1a;
   --muted:        #6a6a6a;
   --accent:       #32EE66;
+  --warn:         #f59e0b;
+  --err:          #ef4444;
   --font:         'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -31,8 +33,8 @@ body {
 #logo-text { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1; }
 #logo-sub  { font-size: 10px; color: var(--muted); line-height: 1; margin-top: 1px; }
 
-/* ─── Step indicator ────────────────────────────────── */
-#step-indicator {
+/* ─── Run indicator ─────────────────────────────────── */
+#run-indicator {
   position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 8px;
   background: var(--glass);
@@ -42,9 +44,11 @@ body {
   font-size: 10px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase;
   color: var(--text);
 }
-#step-indicator .step-num { color: var(--muted); }
-#step-indicator .step-title { color: var(--text); }
-#step-indicator .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+#run-indicator .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+#run-indicator.running .dot { background: var(--accent); animation: pulse 1s infinite; }
+#run-indicator.done .dot { background: var(--accent); }
+#run-indicator.error .dot { background: var(--err); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 /* ─── Bottom buttons ────────────────────────────────── */
 #bottom-btns {
@@ -64,21 +68,21 @@ body {
 }
 .bb.primary       { background: var(--text); color: #fff; }
 .bb.primary-morph { background: var(--accent); color: #1a1a1a; }
-.bb:hover:not(.primary):not(.primary-morph) { color: var(--text); background: rgba(0,0,0,0.05); }
-.bb.primary:hover, .bb.primary-morph:hover { opacity: .8; }
+.bb.danger        { background: var(--err); color: #fff; }
+.bb:hover:not(.primary):not(.primary-morph):not(.danger) { color: var(--text); background: rgba(0,0,0,0.05); }
+.bb.primary:hover, .bb.primary-morph:hover, .bb.danger:hover { opacity: .85; }
 .bb:disabled { opacity: .35; cursor: not-allowed; }
 
 /* ─── Floating boxes ────────────────────────────────── */
 .fbox {
-  position: absolute; top: 50%; transform: translateY(-50%);
+  position: absolute; top: 70px; bottom: 90px;
   display: flex; flex-direction: column; align-items: stretch;
-  width: 200px;
+  width: 220px;
   background: var(--glass);
   backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
   border: 1px solid var(--glass-border);
   border-radius: 20px; padding: 18px 14px; z-index: 10;
   box-shadow: 0 16px 56px rgba(0,0,0,0.13), 0 1px 0 rgba(255,255,255,0.70) inset;
-  max-height: calc(100vh - 120px);
   overflow-y: auto;
 }
 .fbox::-webkit-scrollbar { width: 0; }
@@ -106,21 +110,24 @@ textarea.txt-in {
   height: auto; min-height: 56px; padding: 8px 10px;
   resize: none; line-height: 1.4;
 }
-
-/* ─── Step list (right panel) ───────────────────────── */
-.step-btn {
-  width: 100%; padding: 8px 10px;
-  border-radius: 8px; border: 1px solid rgba(0,0,0,0.07);
-  background: transparent; font-family: var(--font);
-  cursor: pointer; transition: all 0.18s; text-align: left; line-height: 1.3;
-  display: flex; flex-direction: column; gap: 3px;
+.api-key-row { position: relative; display: flex; gap: 4px; align-items: center; }
+.api-key-row .txt-in { padding-right: 32px; font-family: 'SF Mono', monospace; font-size: 10px; }
+.api-eye {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); font-size: 11px; padding: 4px;
 }
-.step-btn:hover { background: rgba(0,0,0,0.04); }
-.step-btn.on    { background: var(--text); color: #fff; border-color: var(--text); }
-.step-btn .sn { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); }
-.step-btn.on .sn { color: rgba(255,255,255,0.55); }
-.step-btn .st { font-size: 11px; font-weight: 500; color: var(--text); }
-.step-btn.on .st { color: #fff; }
+.api-eye:hover { color: var(--text); }
+.api-status {
+  font-size: 9px; color: var(--muted);
+  display: flex; align-items: center; gap: 5px;
+}
+.api-status.ok { color: #15a34a; }
+.api-status.no { color: var(--warn); }
+.api-status::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor; display: inline-block;
+}
 
 /* ─── Action buttons ────────────────────────────────── */
 .ex-btn {
@@ -131,6 +138,7 @@ textarea.txt-in {
   cursor: pointer; transition: opacity 0.18s; text-align: left; line-height: 1;
 }
 .ex-btn:hover { opacity: .75; }
+.ex-btn:disabled { opacity: .35; cursor: not-allowed; }
 .ex-ghost {
   width: 100%; height: 30px; padding: 0 10px;
   background: transparent; color: var(--muted);
@@ -140,91 +148,148 @@ textarea.txt-in {
   transition: all 0.18s; text-align: left; line-height: 1;
 }
 .ex-ghost:hover { border-color: var(--text); color: var(--text); }
+.ex-ghost:disabled { opacity: .35; cursor: not-allowed; }
 
-/* ─── Center stage ──────────────────────────────────── */
-#center {
-  position: absolute; inset: 70px 240px 90px 240px;
-  display: flex; flex-direction: column; gap: 14px;
+/* ─── Ref preview (bar-left) ────────────────────────── */
+#ref-thumb-wrap { position: relative; width: 100%; }
+#ref-thumb {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  border-radius: 8px; display: block;
+  border: 1px solid var(--glass-border);
 }
-#image-zone {
-  flex: 0 0 38%;
+#ref-drop-mini {
+  width: 100%; aspect-ratio: 4/3;
   border: 1.5px dashed rgba(0,0,0,0.18);
-  border-radius: 16px;
-  background: rgba(255,255,255,0.45);
+  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
-  transition: all 0.2s;
-  cursor: pointer;
+  font-size: 9.5px; color: var(--muted); text-align: center; line-height: 1.4;
+  cursor: pointer; transition: all 0.18s; padding: 6px;
 }
-#image-zone.dragging { border-color: var(--accent); background: rgba(50,238,102,0.08); }
-#image-zone.has-image { border-style: solid; border-color: rgba(0,0,0,0.10); cursor: default; }
-#image-zone img {
-  width: 100%; height: 100%; object-fit: contain;
-  display: block;
-}
-#drop-hint {
-  text-align: center; color: var(--muted); pointer-events: none;
-  display: flex; flex-direction: column; gap: 6px;
-}
-#drop-hint .big {
-  font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em;
-}
-#drop-hint .small {
-  font-size: 10.5px; color: var(--muted); letter-spacing: 0.04em;
-}
-#image-zone.has-image #drop-hint { display: none; }
-#img-replace {
-  position: absolute; top: 10px; right: 10px;
-  display: none;
-  background: var(--glass); border: 1px solid var(--glass-border);
-  border-radius: 100px; padding: 5px 12px;
-  font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text); cursor: pointer;
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-}
-#image-zone.has-image #img-replace { display: block; }
-#img-replace:hover { background: #fff; }
+#ref-drop-mini:hover, #ref-drop-mini.dragging { border-color: var(--accent); background: rgba(50,238,102,0.06); color: var(--text); }
 
-#prompt-zone {
-  flex: 1;
+/* ─── Center stage / TIMELINE ───────────────────────── */
+#center {
+  position: absolute; top: 70px; bottom: 90px;
+  left: 260px; right: 260px;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 0 8px;
+}
+#center::-webkit-scrollbar { width: 8px; }
+#center::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+#center::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
+
+#timeline {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 4px 12px 20px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* ─── Card ──────────────────────────────────────────── */
+.tc {
   background: var(--glass);
   backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  padding: 18px 20px 16px;
+  padding: 14px 16px 12px;
   display: flex; flex-direction: column; gap: 10px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.06);
-  min-height: 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.05);
+  transition: border-color 0.2s;
 }
-#prompt-head {
-  display: flex; align-items: center; justify-content: space-between;
+.tc.running { border-color: var(--accent); box-shadow: 0 8px 32px rgba(50,238,102,0.18); }
+.tc.error   { border-color: var(--err);    box-shadow: 0 8px 32px rgba(239,68,68,0.12); }
+
+.tc-head {
+  display: flex; align-items: center; gap: 10px;
+}
+.tc-num {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--muted);
+  background: rgba(0,0,0,0.04);
+  padding: 5px 9px; border-radius: 6px;
   flex-shrink: 0;
 }
-#prompt-head .label {
-  font-size: 9.5px; font-weight: 600; letter-spacing: 0.10em;
-  text-transform: uppercase; color: var(--muted);
+.tc-title {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--text);
+  flex: 1; min-width: 0;
 }
-#prompt-head .copy-mini {
-  font-size: 9px; font-weight: 600; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--text);
+.tc-status {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 100px;
+  background: rgba(0,0,0,0.05); color: var(--muted);
+  flex-shrink: 0;
+}
+.tc-status.running { background: var(--accent); color: #1a1a1a; }
+.tc-status.done    { background: var(--text);   color: #fff; }
+.tc-status.error   { background: var(--err);    color: #fff; }
+
+.tc-body {
+  position: relative;
+  width: 100%; aspect-ratio: 4/3;
+  background: rgba(0,0,0,0.025);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.tc-ref .tc-body { aspect-ratio: 4/3; }
+.tc-body img {
+  width: 100%; height: 100%; object-fit: contain;
+  display: block; background: #fff;
+}
+.tc-placeholder {
+  display: flex; flex-direction: column; gap: 4px;
+  color: var(--muted); text-align: center;
+  pointer-events: none;
+}
+.tc-placeholder .lg { font-size: 11.5px; font-weight: 500; color: var(--text); }
+.tc-placeholder .sm { font-size: 10px; }
+
+.tc-spinner {
+  width: 28px; height: 28px;
+  border: 2.5px solid rgba(0,0,0,0.08);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.tc-foot {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap;
+}
+.tc-btn {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 100px;
   background: transparent; border: 1px solid rgba(0,0,0,0.12);
-  border-radius: 100px; padding: 5px 12px; cursor: pointer;
+  color: var(--text); cursor: pointer; font-family: var(--font);
   transition: all 0.18s;
 }
-#prompt-head .copy-mini:hover { background: var(--text); color: #fff; }
-#prompt-head .copy-mini.copied { background: var(--accent); color: #1a1a1a; border-color: var(--accent); }
-#prompt-text {
-  flex: 1; min-height: 0;
-  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
-  font-size: 12px; line-height: 1.55;
-  color: var(--text);
-  white-space: pre-wrap; word-break: break-word;
-  overflow-y: auto;
-  padding-right: 4px;
+.tc-btn:hover { background: var(--text); color: #fff; border-color: var(--text); }
+.tc-btn:disabled { opacity: .35; cursor: not-allowed; background: transparent; color: var(--muted); border-color: rgba(0,0,0,0.12); }
+.tc-btn.accent { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+.tc-btn.accent:hover { opacity: .85; background: var(--accent); color: #1a1a1a; }
+.tc-err {
+  font-size: 10px; color: var(--err); line-height: 1.4;
+  background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15);
+  border-radius: 6px; padding: 6px 10px;
+  font-family: 'SF Mono', monospace;
+  word-break: break-word;
 }
-#prompt-text::-webkit-scrollbar { width: 4px; }
-#prompt-text::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
-.tk { color: var(--accent); font-weight: 600; background: rgba(50,238,102,0.12); padding: 0 4px; border-radius: 3px; }
+.tc-prompt {
+  display: none;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px; line-height: 1.5;
+  color: var(--muted);
+  white-space: pre-wrap; word-break: break-word;
+  background: rgba(0,0,0,0.03); border-radius: 6px;
+  padding: 8px 10px;
+  max-height: 220px; overflow-y: auto;
+}
+.tc.show-prompt .tc-prompt { display: block; }
+
+.tk { color: #1a8b35; font-weight: 600; background: rgba(50,238,102,0.12); padding: 0 3px; border-radius: 2px; }
 
 #toast {
   position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%);
@@ -235,16 +300,16 @@ textarea.txt-in {
   z-index: 20;
 }
 #toast.on { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+#toast.err { background: var(--err); }
 
-/* ─── Responsive shrink ─────────────────────────────── */
-@media (max-width: 980px) {
-  .fbox { width: 170px; }
-  #center { inset: 70px 210px 90px 210px; }
+@media (max-width: 1100px) {
+  .fbox { width: 190px; }
+  #center { left: 230px; right: 230px; }
 }
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   html, body { overflow: auto; }
-  .fbox { position: static; transform: none; width: 100%; max-width: 480px; margin: 16px auto; max-height: none; }
-  #center { position: static; inset: auto; margin: 0 auto; max-width: 720px; padding: 16px; }
+  .fbox { position: static; transform: none; width: 100%; max-width: 480px; margin: 16px auto; height: auto; top: auto; bottom: auto; }
+  #center { position: static; left: auto; right: auto; top: auto; bottom: auto; max-width: 720px; margin: 0 auto; padding: 16px; }
   #bottom-btns { position: static; transform: none; margin: 16px auto; }
 }
 </style>
@@ -256,71 +321,79 @@ textarea.txt-in {
   <div id="logo-sub">by tropicOS</div>
 </div>
 
-<div id="step-indicator">
-  <span class="step-num">step <span id="ind-num">01</span> / 05</span>
+<div id="run-indicator">
   <span class="dot"></span>
-  <span class="step-title" id="ind-title">reference deconstruction</span>
+  <span id="ind-text">idle</span>
 </div>
 
 <!-- LEFT: Inputs -->
 <div class="fbox" id="bar-left">
 
   <div class="bs">
-    <div class="bl">Brand A</div>
-    <input type="text" class="txt-in" id="in-brand-a" placeholder="Gucci" autocomplete="off">
+    <div class="bl">Reference</div>
+    <input type="file" id="img-input" accept="image/*" style="display:none">
+    <div id="ref-thumb-wrap" style="display:none">
+      <img id="ref-thumb" alt="reference">
+    </div>
+    <div id="ref-drop-mini">drop, click<br>or paste (⌘V)</div>
+    <button class="ex-ghost" id="btn-clear-img" style="display:none;margin-top:4px">↺ Clear</button>
   </div>
 
   <div class="bd"></div>
+
+  <div class="bs">
+    <div class="bl">Brand A</div>
+    <input type="text" class="txt-in" id="in-brand-a" placeholder="Gucci" autocomplete="off">
+  </div>
 
   <div class="bs">
     <div class="bl">Brand B <span style="color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400">— colab</span></div>
     <input type="text" class="txt-in" id="in-brand-b" placeholder="Crocs (optional)" autocomplete="off">
   </div>
 
-  <div class="bd"></div>
-
   <div class="bs">
     <div class="bl">Vibe</div>
-    <textarea class="txt-in" id="in-vibe" rows="3" placeholder="luxury × streetwear tension"></textarea>
-  </div>
-
-  <div class="bd"></div>
-
-  <div class="bs">
-    <div class="bl">Reference</div>
-    <input type="file" id="img-input" accept="image/*" style="display:none">
-    <button class="ex-ghost" id="btn-upload">↑ Upload image</button>
-    <button class="ex-ghost" id="btn-clear-img" style="display:none">↺ Clear image</button>
-    <div style="font-size:9px;color:var(--muted);line-height:1.4;margin-top:2px">drag, click or paste (⌘V)</div>
+    <textarea class="txt-in" id="in-vibe" rows="2" placeholder="luxury × streetwear tension"></textarea>
   </div>
 
 </div>
 
-<!-- CENTER: image + prompt -->
+<!-- CENTER: Timeline -->
 <div id="center">
-  <div id="image-zone">
-    <div id="drop-hint">
-      <div class="big">drop reference image</div>
-      <div class="small">or click — or paste with ⌘V</div>
-    </div>
-    <button id="img-replace">replace</button>
-  </div>
-
-  <div id="prompt-zone">
-    <div id="prompt-head">
-      <div class="label" id="prompt-label">prompt 01 — reference deconstruction</div>
-      <button class="copy-mini" id="btn-copy-mini">copy</button>
-    </div>
-    <div id="prompt-text"></div>
-  </div>
+  <div id="timeline"></div>
 </div>
 
-<!-- RIGHT: Steps + Export -->
+<!-- RIGHT: API + Run + Export -->
 <div class="fbox" id="bar-right">
 
   <div class="bs">
-    <div class="bl">Workflow</div>
-    <div id="step-list" style="display:flex;flex-direction:column;gap:4px"></div>
+    <div class="bl">Gemini API key</div>
+    <div class="api-key-row">
+      <input type="password" class="txt-in" id="in-api-key" placeholder="AIza..." autocomplete="off">
+      <button class="api-eye" id="btn-api-eye" title="show/hide">◉</button>
+    </div>
+    <div class="api-status no" id="api-status">no key</div>
+    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="font-size:9px;color:var(--muted);text-decoration:underline;line-height:1.3">get key at aistudio.google.com</a>
+  </div>
+
+  <div class="bd"></div>
+
+  <div class="bs">
+    <div class="bl">Model</div>
+    <select class="txt-in" id="in-model" style="cursor:pointer">
+      <option value="gemini-2.5-flash-image">Nano Banana (flash)</option>
+      <option value="gemini-3-pro-image">Nano Banana Pro</option>
+    </select>
+  </div>
+
+  <div class="bd"></div>
+
+  <div class="bs">
+    <div class="bl">Run</div>
+    <button class="ex-btn" id="btn-run-all" style="background:var(--accent);color:#1a1a1a">▶ Run all 5 steps</button>
+    <button class="ex-ghost" id="btn-run-next">▶ Run next step</button>
+    <button class="ex-ghost" id="btn-stop" disabled style="border-color:rgba(239,68,68,.4);color:#ef4444">■ Stop</button>
+    <button class="ex-ghost" id="btn-reset">↺ Reset outputs</button>
   </div>
 
   <div class="bd"></div>
@@ -329,36 +402,21 @@ textarea.txt-in {
     <div class="bl">Export</div>
     <button class="ex-btn" id="btn-copy-all">⎘ Copy all prompts</button>
     <button class="ex-ghost" id="btn-export-md">↓ Export brief.md</button>
+    <button class="ex-ghost" id="btn-export-imgs">↓ Download images</button>
   </div>
 
-  <div class="bd"></div>
-
-  <div class="bs">
-    <div class="bl">How</div>
-    <div style="font-size:10px;line-height:1.5;color:var(--muted)">
-      paste each prompt into your AI of choice (ChatGPT, Sora, Nano Banana, LTX). attach the reference image at step 01.
-    </div>
-  </div>
-
-</div>
-
-<!-- BOTTOM nav -->
-<div id="bottom-btns">
-  <button class="bb" id="btn-prev">← prev</button>
-  <button class="bb primary-morph" id="btn-copy">⎘ copy prompt</button>
-  <button class="bb" id="btn-next">next →</button>
 </div>
 
 <div id="toast">copied</div>
 
 <script>
-// ─── Prompt templates (verbatim from the article) ──────────────
+// ─── Step definitions ─────────────────────────────────────────
 const STEPS = [
   {
-    key: 'reference',
-    title: 'reference deconstruction',
-    label: 'extracts the creative system from your ref image',
-    build: (s) => `You are a world-class Creative Director and Brand Designer working at a top-tier agency.
+    key: 'reference', title: 'Reference deconstruction',
+    placeholder: 'brand board extracted from your reference',
+    inputs: (s) => [s.refImage].filter(Boolean),
+    build: () => `You are a world-class Creative Director and Brand Designer working at a top-tier agency.
 
 Using the provided reference image as the source of truth, create a clean 4:3 visual brand board.
 
@@ -389,9 +447,9 @@ Design direction:
 The board should feel like a professional agency campaign direction slide: visual, structured, immediately understandable, and ready to use as the foundation for a full brand campaign.`
   },
   {
-    key: 'concept',
-    title: 'concept transfer',
-    label: 'applies the system to your brand',
+    key: 'concept', title: 'Concept transfer',
+    placeholder: 'system applied to your brand',
+    inputs: (s) => [s.refImage, s.outputs[0]].filter(Boolean),
     build: (s) => {
       const brand = brandToken(s);
       const vibeLine = s.vibe.trim() ? `\n\nDesign tension to embody: ${s.vibe.trim()}` : '';
@@ -404,10 +462,10 @@ be especially careful with brands' fonts consistency and accuracy${vibeLine}`;
     }
   },
   {
-    key: 'assets',
-    title: 'asset moodboard',
-    label: 'bento of banners, posts, mockups',
-    build: (s) => `Now create me a moodboard of actual visual assets for this campaign:
+    key: 'assets', title: 'Asset moodboard',
+    placeholder: 'bento of banners, posts, mockups',
+    inputs: (s) => [s.refImage, s.outputs[1]].filter(Boolean),
+    build: () => `Now create me a moodboard of actual visual assets for this campaign:
 * digital banners,
 * social media banners & posts,
 * ad materials,
@@ -420,19 +478,19 @@ make 30% less images, but make them tighter
 and looking more like a bento grid`
   },
   {
-    key: 'brief',
-    title: 'brief slide',
-    label: 'lock the vision — brief + idea + goals',
-    build: (s) => `now create me a slide with this campaign's
+    key: 'brief', title: 'Brief slide',
+    placeholder: 'idea + goals slide',
+    inputs: (s) => [s.refImage, s.outputs[1]].filter(Boolean),
+    build: () => `now create me a slide with this campaign's
 * brief,
 * idea
 * and goals`
   },
   {
-    key: 'keyvisual',
-    title: 'key visual',
-    label: 'cover art — Forbes / Esquire level',
-    build: (s) => `now create a clean image slide with
+    key: 'keyvisual', title: 'Key visual',
+    placeholder: 'cover art — Forbes / Esquire level',
+    inputs: (s) => [s.refImage, s.outputs[1]].filter(Boolean),
+    build: () => `now create a clean image slide with
 a photo scene of campaign-relevant characters
 positioned in a campaign-relevant surrounding
 with campaign slogan positioned on top of the photograph
@@ -449,132 +507,255 @@ I need a cover art for the whole campaign`
 ];
 
 function brandToken(s) {
-  const a = s.brandA.trim();
-  const b = s.brandB.trim();
+  const a = s.brandA.trim(), b = s.brandB.trim();
   if (a && b) return `[${a} × ${b}]`;
   if (a)      return `[${a}]`;
   return '[INSERT ANY BRAND HERE]';
 }
 
 // ─── State ────────────────────────────────────────────────────
+const LS_KEY = 'campaign-engine-gemini-key';
+const LS_MODEL = 'campaign-engine-model';
 const state = {
-  brandA: '',
-  brandB: '',
-  vibe: '',
-  imageDataUrl: null,
-  imageName: null,
-  current: 0,
+  brandA: '', brandB: '', vibe: '',
+  refImage: null,   // { dataUrl, mimeType, base64 }
+  refName: null,
+  outputs: [null, null, null, null, null],   // each: { dataUrl, mimeType, base64 }
+  status:  ['idle','idle','idle','idle','idle'],
+  errors:  [null,null,null,null,null],
+  showPrompt: [false,false,false,false,false],
+  running: false,
+  abort: null,
+  apiKey: '',
+  model: 'gemini-2.5-flash-image',
 };
 
 // ─── DOM ──────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const inA = $('in-brand-a'), inB = $('in-brand-b'), inV = $('in-vibe');
-const imageZone = $('image-zone'), dropHint = $('drop-hint'), imgReplace = $('img-replace');
-const imgInput = $('img-input'), btnUpload = $('btn-upload'), btnClearImg = $('btn-clear-img');
-const promptText = $('prompt-text'), promptLabel = $('prompt-label');
-const btnCopy = $('btn-copy'), btnCopyMini = $('btn-copy-mini');
-const btnPrev = $('btn-prev'), btnNext = $('btn-next');
-const btnCopyAll = $('btn-copy-all'), btnExportMd = $('btn-export-md');
-const stepList = $('step-list');
-const indNum = $('ind-num'), indTitle = $('ind-title');
+const inKey = $('in-api-key'), btnEye = $('btn-api-eye'), apiStatus = $('api-status');
+const inModel = $('in-model');
+const imgInput = $('img-input');
+const refThumbWrap = $('ref-thumb-wrap'), refThumb = $('ref-thumb');
+const refDropMini = $('ref-drop-mini'), btnClearImg = $('btn-clear-img');
+const timeline = $('timeline');
+const btnRunAll = $('btn-run-all'), btnRunNext = $('btn-run-next'), btnStop = $('btn-stop'), btnReset = $('btn-reset');
+const btnCopyAll = $('btn-copy-all'), btnExportMd = $('btn-export-md'), btnExportImgs = $('btn-export-imgs');
+const indicator = $('run-indicator'), indText = $('ind-text');
 const toast = $('toast');
 
+// ─── Helpers ──────────────────────────────────────────────────
+function parseDataUrl(dataUrl) {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!m) return null;
+  return { dataUrl, mimeType: m[1], base64: m[2] };
+}
+function showToast(msg, isErr) {
+  toast.textContent = msg;
+  toast.classList.toggle('err', !!isErr);
+  toast.classList.add('on');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('on'), 1800);
+}
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('copied'))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); ta.remove();
+      showToast('copied');
+    });
+}
+
 // ─── Render ───────────────────────────────────────────────────
-function renderStepList() {
-  stepList.innerHTML = '';
+function statusLabel(st, i) {
+  if (st === 'running') return 'generating';
+  if (st === 'done')    return 'done';
+  if (st === 'error')   return 'error';
+  return 'idle';
+}
+
+function renderTimeline() {
+  timeline.innerHTML = '';
+
+  // REF card
+  const refCard = document.createElement('div');
+  refCard.className = 'tc tc-ref';
+  refCard.innerHTML = `
+    <div class="tc-head">
+      <div class="tc-num">REF</div>
+      <div class="tc-title">Reference image</div>
+      <div class="tc-status">${state.refImage ? 'loaded' : 'empty'}</div>
+    </div>
+    <div class="tc-body" id="ref-body">
+      ${state.refImage
+        ? `<img src="${state.refImage.dataUrl}" alt="reference">`
+        : `<div class="tc-placeholder"><div class="lg">drop reference image</div><div class="sm">or click, or paste with ⌘V</div></div>`}
+    </div>
+  `;
+  if (!state.refImage) {
+    refCard.querySelector('.tc-body').style.cursor = 'pointer';
+    refCard.querySelector('.tc-body').addEventListener('click', () => imgInput.click());
+  }
+  timeline.appendChild(refCard);
+
+  // Step cards
   STEPS.forEach((step, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'step-btn' + (i === state.current ? ' on' : '');
-    btn.innerHTML = `<span class="sn">${String(i+1).padStart(2,'0')}</span><span class="st">${step.title}</span>`;
-    btn.addEventListener('click', () => { state.current = i; renderAll(); });
-    stepList.appendChild(btn);
+    const out = state.outputs[i];
+    const st = state.status[i];
+    const err = state.errors[i];
+    const card = document.createElement('div');
+    card.className = `tc ${st === 'running' ? 'running' : ''} ${st === 'error' ? 'error' : ''} ${state.showPrompt[i] ? 'show-prompt' : ''}`;
+    const tokenPrompt = escapeHtml(step.build(state));
+
+    card.innerHTML = `
+      <div class="tc-head">
+        <div class="tc-num">${String(i+1).padStart(2,'0')}</div>
+        <div class="tc-title">${step.title}</div>
+        <div class="tc-status ${st}">${statusLabel(st, i)}</div>
+      </div>
+      <div class="tc-body">
+        ${out
+          ? `<img src="${out.dataUrl}" alt="${step.title}">`
+          : st === 'running'
+            ? `<div class="tc-spinner"></div>`
+            : `<div class="tc-placeholder"><div class="lg">${step.placeholder}</div><div class="sm">press generate to run</div></div>`}
+      </div>
+      ${err ? `<div class="tc-err">${escapeHtml(err)}</div>` : ''}
+      <div class="tc-foot">
+        <button class="tc-btn accent" data-act="gen" data-i="${i}">${out ? '↺ regenerate' : '▶ generate'}</button>
+        <button class="tc-btn" data-act="prompt" data-i="${i}">${state.showPrompt[i] ? 'hide prompt' : 'view prompt'}</button>
+        ${out ? `<button class="tc-btn" data-act="download" data-i="${i}">↓ download</button>` : ''}
+      </div>
+      <div class="tc-prompt">${tokenPrompt}</div>
+    `;
+    timeline.appendChild(card);
+  });
+
+  // Wire up card buttons
+  timeline.querySelectorAll('button[data-act]').forEach(btn => {
+    const act = btn.dataset.act, i = parseInt(btn.dataset.i, 10);
+    btn.addEventListener('click', () => {
+      if (act === 'gen')      generateStep(i);
+      if (act === 'prompt')   { state.showPrompt[i] = !state.showPrompt[i]; renderTimeline(); }
+      if (act === 'download') downloadImage(i);
+    });
   });
 }
 
-function renderPrompt() {
-  const step = STEPS[state.current];
-  const text = step.build(state);
-  // Highlight brand token visually
-  const token = brandToken(state);
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  const tokenEsc = token.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const html = escaped.split(tokenEsc).join(`<span class="tk">${tokenEsc}</span>`);
-  promptText.innerHTML = html;
-  promptLabel.textContent = `prompt ${String(state.current+1).padStart(2,'0')} — ${step.title}`;
-  indNum.textContent = String(state.current+1).padStart(2,'0');
-  indTitle.textContent = step.title;
-  btnPrev.disabled = state.current === 0;
-  btnNext.disabled = state.current === STEPS.length - 1;
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function renderImage() {
-  // Clear any existing img child first (keep dropHint and imgReplace)
-  imageZone.querySelectorAll('img').forEach(n => n.remove());
-  if (state.imageDataUrl) {
-    const img = document.createElement('img');
-    img.src = state.imageDataUrl;
-    imageZone.insertBefore(img, dropHint);
-    imageZone.classList.add('has-image');
-    btnClearImg.style.display = 'block';
-    btnUpload.textContent = '↑ Replace image';
+function renderIndicator() {
+  const doneCount = state.status.filter(s => s === 'done').length;
+  indicator.classList.remove('running','done','error');
+  if (state.running) {
+    indicator.classList.add('running');
+    const cur = state.status.findIndex(s => s === 'running');
+    indText.textContent = `running step ${String(cur+1).padStart(2,'0')} / 05`;
+  } else if (state.status.some(s => s === 'error')) {
+    indicator.classList.add('error');
+    indText.textContent = `error · ${doneCount}/5 done`;
+  } else if (doneCount === 5) {
+    indicator.classList.add('done');
+    indText.textContent = 'all 5 done';
+  } else if (doneCount > 0) {
+    indText.textContent = `${doneCount}/5 done`;
   } else {
-    imageZone.classList.remove('has-image');
+    indText.textContent = 'idle';
+  }
+}
+
+function renderRunButtons() {
+  const hasKey = !!state.apiKey;
+  const hasRef = !!state.refImage;
+  btnRunAll.disabled  = state.running || !hasKey || !hasRef;
+  btnRunNext.disabled = state.running || !hasKey || !hasRef;
+  btnStop.disabled    = !state.running;
+  btnReset.disabled   = state.running;
+}
+
+function renderRef() {
+  if (state.refImage) {
+    refThumb.src = state.refImage.dataUrl;
+    refThumbWrap.style.display = 'block';
+    refDropMini.style.display = 'none';
+    btnClearImg.style.display = 'block';
+  } else {
+    refThumbWrap.style.display = 'none';
+    refDropMini.style.display = 'flex';
     btnClearImg.style.display = 'none';
-    btnUpload.textContent = '↑ Upload image';
+  }
+}
+
+function renderApiStatus() {
+  if (state.apiKey) {
+    apiStatus.classList.remove('no'); apiStatus.classList.add('ok');
+    apiStatus.textContent = 'key loaded';
+  } else {
+    apiStatus.classList.remove('ok'); apiStatus.classList.add('no');
+    apiStatus.textContent = 'no key';
   }
 }
 
 function renderAll() {
-  renderStepList();
-  renderPrompt();
-  renderImage();
+  renderTimeline();
+  renderIndicator();
+  renderRunButtons();
+  renderRef();
+  renderApiStatus();
 }
 
-// ─── Inputs ───────────────────────────────────────────────────
-inA.addEventListener('input', e => { state.brandA = e.target.value; renderPrompt(); });
-inB.addEventListener('input', e => { state.brandB = e.target.value; renderPrompt(); });
-inV.addEventListener('input', e => { state.vibe   = e.target.value; renderPrompt(); });
+// ─── Input handlers ───────────────────────────────────────────
+inA.addEventListener('input', e => { state.brandA = e.target.value; renderTimeline(); });
+inB.addEventListener('input', e => { state.brandB = e.target.value; renderTimeline(); });
+inV.addEventListener('input', e => { state.vibe   = e.target.value; renderTimeline(); });
+inKey.addEventListener('input', e => {
+  state.apiKey = e.target.value.trim();
+  localStorage.setItem(LS_KEY, state.apiKey);
+  renderApiStatus(); renderRunButtons();
+});
+btnEye.addEventListener('click', () => {
+  inKey.type = inKey.type === 'password' ? 'text' : 'password';
+});
+inModel.addEventListener('change', e => {
+  state.model = e.target.value;
+  localStorage.setItem(LS_MODEL, state.model);
+});
 
 // ─── Image upload ─────────────────────────────────────────────
 function loadFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
-    state.imageDataUrl = ev.target.result;
-    state.imageName = file.name || 'reference';
-    renderImage();
+    const parsed = parseDataUrl(ev.target.result);
+    if (!parsed) return;
+    state.refImage = parsed;
+    state.refName = file.name || 'reference';
+    renderAll();
   };
   reader.readAsDataURL(file);
 }
-btnUpload.addEventListener('click', () => imgInput.click());
-imageZone.addEventListener('click', (e) => {
-  if (state.imageDataUrl) return;
-  imgInput.click();
-});
-imgReplace.addEventListener('click', (e) => { e.stopPropagation(); imgInput.click(); });
 imgInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
+refDropMini.addEventListener('click', () => imgInput.click());
 btnClearImg.addEventListener('click', () => {
-  state.imageDataUrl = null; state.imageName = null;
+  state.refImage = null; state.refName = null;
   imgInput.value = '';
-  renderImage();
+  renderAll();
 });
 
-// Drag-and-drop
-['dragenter','dragover'].forEach(evt =>
-  imageZone.addEventListener(evt, (e) => { e.preventDefault(); imageZone.classList.add('dragging'); })
-);
-['dragleave','drop'].forEach(evt =>
-  imageZone.addEventListener(evt, (e) => { e.preventDefault(); imageZone.classList.remove('dragging'); })
-);
-imageZone.addEventListener('drop', (e) => {
+['dragenter','dragover'].forEach(evt => {
+  refDropMini.addEventListener(evt, (e) => { e.preventDefault(); refDropMini.classList.add('dragging'); });
+});
+['dragleave','drop'].forEach(evt => {
+  refDropMini.addEventListener(evt, (e) => { e.preventDefault(); refDropMini.classList.remove('dragging'); });
+});
+refDropMini.addEventListener('drop', (e) => {
   const file = e.dataTransfer.files && e.dataTransfer.files[0];
   loadFile(file);
 });
 
-// Paste from clipboard
 window.addEventListener('paste', (e) => {
   if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
   const items = e.clipboardData && e.clipboardData.items;
@@ -588,44 +769,136 @@ window.addEventListener('paste', (e) => {
   }
 });
 
-// ─── Navigation ───────────────────────────────────────────────
-btnPrev.addEventListener('click', () => { if (state.current > 0) { state.current--; renderAll(); } });
-btnNext.addEventListener('click', () => { if (state.current < STEPS.length - 1) { state.current++; renderAll(); } });
-window.addEventListener('keydown', (e) => {
-  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
-  if (e.key === 'ArrowLeft' && state.current > 0) { state.current--; renderAll(); }
-  if (e.key === 'ArrowRight' && state.current < STEPS.length - 1) { state.current++; renderAll(); }
+// ─── Gemini call ──────────────────────────────────────────────
+async function callGemini(prompt, inputImages, signal) {
+  if (!state.apiKey) throw new Error('no API key');
+  const parts = [{ text: prompt }];
+  for (const img of inputImages) {
+    parts.push({ inline_data: { mime_type: img.mimeType, data: img.base64 } });
+  }
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(state.model)}:generateContent`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': state.apiKey },
+    body: JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: { responseModalities: ['IMAGE'] }
+    }),
+    signal,
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = (j.error && j.error.message) || JSON.stringify(j); }
+    catch { detail = await res.text(); }
+    throw new Error(`${res.status}: ${detail.slice(0, 240)}`);
+  }
+  const data = await res.json();
+  const cand = data.candidates && data.candidates[0];
+  const parts2 = cand && cand.content && cand.content.parts;
+  if (!parts2) {
+    const reason = cand && cand.finishReason ? `finishReason=${cand.finishReason}` : 'no candidate parts';
+    throw new Error(`no image returned (${reason})`);
+  }
+  const imgPart = parts2.find(p => p.inlineData || p.inline_data);
+  if (!imgPart) {
+    const txt = parts2.find(p => p.text);
+    throw new Error(`no image returned${txt ? ' — model said: ' + txt.text.slice(0,160) : ''}`);
+  }
+  const inl = imgPart.inlineData || imgPart.inline_data;
+  const mime = inl.mimeType || inl.mime_type || 'image/png';
+  const dataUrl = `data:${mime};base64,${inl.data}`;
+  return parseDataUrl(dataUrl);
+}
+
+// ─── Step runner ──────────────────────────────────────────────
+async function generateStep(i) {
+  if (!state.apiKey)   { showToast('add Gemini API key first', true); return; }
+  if (!state.refImage) { showToast('upload a reference image first', true); return; }
+  if (state.running)   return;
+
+  // For steps > 0 that depend on previous output, generate dependencies first if missing
+  if (i > 0 && !state.outputs[i - 1]) {
+    // Only step 1 strictly depends on step 0 output (others fall back to ref if missing)
+    if (i === 1) {
+      // generate step 0 first, then this one
+      await runFrom(0, i);
+      return;
+    }
+  }
+
+  await runFrom(i, i);
+}
+
+async function runAll() {
+  await runFrom(0, STEPS.length - 1);
+}
+
+async function runNext() {
+  // Find the first non-done step
+  const idx = state.status.findIndex(s => s !== 'done');
+  if (idx === -1) { showToast('all 5 done'); return; }
+  await runFrom(idx, idx);
+}
+
+async function runFrom(start, end) {
+  if (state.running) return;
+  if (!state.apiKey)   { showToast('add Gemini API key first', true); return; }
+  if (!state.refImage) { showToast('upload a reference image first', true); return; }
+
+  state.running = true;
+  state.abort = new AbortController();
+  renderRunButtons(); renderIndicator();
+
+  try {
+    for (let i = start; i <= end; i++) {
+      if (state.abort.signal.aborted) break;
+      const step = STEPS[i];
+      state.status[i] = 'running';
+      state.errors[i] = null;
+      renderTimeline(); renderIndicator();
+
+      try {
+        const prompt = step.build(state);
+        const inputs = step.inputs(state);
+        const result = await callGemini(prompt, inputs, state.abort.signal);
+        state.outputs[i] = result;
+        state.status[i] = 'done';
+        renderTimeline(); renderIndicator();
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          state.status[i] = 'idle';
+        } else {
+          state.status[i] = 'error';
+          state.errors[i] = (e.message || String(e));
+          renderTimeline(); renderIndicator();
+          // stop the chain on error
+          break;
+        }
+      }
+    }
+  } finally {
+    state.running = false;
+    state.abort = null;
+    renderRunButtons(); renderIndicator();
+  }
+}
+
+btnRunAll.addEventListener('click', runAll);
+btnRunNext.addEventListener('click', runNext);
+btnStop.addEventListener('click', () => {
+  if (state.abort) state.abort.abort();
+  showToast('stopping...');
+});
+btnReset.addEventListener('click', () => {
+  if (state.running) return;
+  state.outputs = [null,null,null,null,null];
+  state.status = ['idle','idle','idle','idle','idle'];
+  state.errors = [null,null,null,null,null];
+  renderAll();
+  showToast('outputs cleared');
 });
 
-// ─── Copy ─────────────────────────────────────────────────────
-function showToast(msg) {
-  toast.textContent = msg;
-  toast.classList.add('on');
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => toast.classList.remove('on'), 1400);
-}
-function copyText(text) {
-  navigator.clipboard.writeText(text).then(() => showToast('copied'))
-    .catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = text; document.body.appendChild(ta);
-      ta.select(); document.execCommand('copy'); ta.remove();
-      showToast('copied');
-    });
-}
-function currentPromptText() { return STEPS[state.current].build(state); }
-btnCopy.addEventListener('click', () => copyText(currentPromptText()));
-btnCopyMini.addEventListener('click', () => {
-  copyText(currentPromptText());
-  btnCopyMini.classList.add('copied');
-  btnCopyMini.textContent = 'copied';
-  clearTimeout(btnCopyMini._t);
-  btnCopyMini._t = setTimeout(() => {
-    btnCopyMini.classList.remove('copied');
-    btnCopyMini.textContent = 'copy';
-  }, 1400);
-});
-
+// ─── Copy & export ────────────────────────────────────────────
 btnCopyAll.addEventListener('click', () => {
   const all = STEPS.map((s, i) =>
     `─── PROMPT ${String(i+1).padStart(2,'0')} — ${s.title.toUpperCase()} ───\n\n${s.build(state)}`
@@ -633,16 +906,35 @@ btnCopyAll.addEventListener('click', () => {
   copyText(all);
 });
 
-// ─── Export brief.md ──────────────────────────────────────────
+function downloadImage(i) {
+  const out = state.outputs[i];
+  if (!out) return;
+  const step = STEPS[i];
+  const a = state.brandA.trim() || 'campaign';
+  const b = state.brandB.trim();
+  const slug = (a + (b ? '-x-' + b : '')).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'campaign';
+  const ext = (out.mimeType.split('/')[1] || 'png');
+  const link = document.createElement('a');
+  link.href = out.dataUrl;
+  link.download = `${slug}-${String(i+1).padStart(2,'0')}-${step.key}.${ext}`;
+  document.body.appendChild(link); link.click(); link.remove();
+}
+
+btnExportImgs.addEventListener('click', () => {
+  const any = state.outputs.some(o => o);
+  if (!any) { showToast('no images yet', true); return; }
+  state.outputs.forEach((o, i) => { if (o) downloadImage(i); });
+});
+
 btnExportMd.addEventListener('click', () => {
   const stamp = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const a = state.brandA.trim() || '(brand A)';
   const b = state.brandB.trim();
   const vibe = state.vibe.trim() || '—';
-  const refLine = state.imageName ? `\`${state.imageName}\` (attached separately)` : '_none uploaded_';
+  const refLine = state.refName ? `\`${state.refName}\`` : '_none uploaded_';
 
   let md = `# Campaign Brief\n\n`;
-  md += `> Generated with **Campaign Engine** — tropicOS · ${stamp}\n\n`;
+  md += `> Generated with **Campaign Engine** — tropicOS · ${stamp}\n> Model: \`${state.model}\`\n\n`;
   md += `## Inputs\n\n`;
   md += `- **Brand A**: ${a}\n`;
   md += `- **Brand B**: ${b || '_(none)_'}\n`;
@@ -650,10 +942,9 @@ btnExportMd.addEventListener('click', () => {
   md += `- **Reference image**: ${refLine}\n\n`;
   md += `---\n\n`;
   md += `## Workflow — 5 prompts (in order)\n\n`;
-  md += `Paste each prompt into your AI of choice (ChatGPT / Sora / Nano Banana / LTX). Attach the reference image at step 01.\n\n`;
   STEPS.forEach((s, i) => {
-    md += `### ${String(i+1).padStart(2,'0')}. ${s.title}\n\n`;
-    md += `_${s.label}_\n\n`;
+    const st = state.status[i];
+    md += `### ${String(i+1).padStart(2,'0')}. ${s.title} _(${st})_\n\n`;
     md += '```text\n' + s.build(state) + '\n```\n\n';
   });
   md += `---\n\n_Workflow based on the "image-to-engine" method by @AmirMushich._\n`;
@@ -669,6 +960,10 @@ btnExportMd.addEventListener('click', () => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────
+const savedKey = localStorage.getItem(LS_KEY);
+if (savedKey) { state.apiKey = savedKey; inKey.value = savedKey; }
+const savedModel = localStorage.getItem(LS_MODEL);
+if (savedModel) { state.model = savedModel; inModel.value = savedModel; }
 renderAll();
 </script>
 
