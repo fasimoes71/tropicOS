@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaign Engine — tropicOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --glass:        rgba(255,255,255,0.90);
+  --glass-border: rgba(0,0,0,0.13);
+  --text:         #1a1a1a;
+  --muted:        #6a6a6a;
+  --accent:       #32EE66;
+  --font:         'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: #f7f7f9;
+  font-family: var(--font);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Logo ──────────────────────────────────────────── */
+#logo { position: absolute; top: 16px; left: 20px; pointer-events: none; z-index: 10; }
+#logo-text { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1; }
+#logo-sub  { font-size: 10px; color: var(--muted); line-height: 1; margin-top: 1px; }
+
+/* ─── Step indicator ────────────────────────────────── */
+#step-indicator {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  background: var(--glass);
+  backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--glass-border);
+  border-radius: 100px; padding: 6px 14px; z-index: 10;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text);
+}
+#step-indicator .step-num { color: var(--muted); }
+#step-indicator .step-title { color: var(--text); }
+#step-indicator .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+/* ─── Bottom buttons ────────────────────────────────── */
+#bottom-btns {
+  position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px;
+  background: var(--glass);
+  backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--glass-border);
+  border-radius: 100px; padding: 4px; z-index: 10;
+}
+.bb {
+  font-family: var(--font); font-size: 9.5px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); padding: 6px 16px;
+  border-radius: 100px; border: none; background: transparent;
+  cursor: pointer; transition: all 0.18s; line-height: 1;
+}
+.bb.primary       { background: var(--text); color: #fff; }
+.bb.primary-morph { background: var(--accent); color: #1a1a1a; }
+.bb:hover:not(.primary):not(.primary-morph) { color: var(--text); background: rgba(0,0,0,0.05); }
+.bb.primary:hover, .bb.primary-morph:hover { opacity: .8; }
+.bb:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ─── Floating boxes ────────────────────────────────── */
+.fbox {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: stretch;
+  width: 200px;
+  background: var(--glass);
+  backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px; padding: 18px 14px; z-index: 10;
+  box-shadow: 0 16px 56px rgba(0,0,0,0.13), 0 1px 0 rgba(255,255,255,0.70) inset;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+.fbox::-webkit-scrollbar { width: 0; }
+#bar-left  { left: 20px; }
+#bar-right { right: 20px; }
+
+.bs { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; }
+.bs:first-child { padding-top: 0; }
+.bs:last-child  { padding-bottom: 0; }
+
+.bl { font-size: 9.5px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text); line-height: 1; }
+.bd { width: 100%; height: 1px; background: rgba(0,0,0,0.14); flex-shrink: 0; }
+
+/* ─── Inputs ────────────────────────────────────────── */
+.txt-in {
+  width: 100%; height: 30px; padding: 0 10px;
+  border-radius: 8px; border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(255,255,255,0.5); font-family: var(--font);
+  font-size: 11px; font-weight: 500; color: var(--text);
+  outline: none; transition: all 0.18s; line-height: 1;
+}
+.txt-in:focus { border-color: var(--text); background: #fff; }
+.txt-in::placeholder { color: var(--muted); }
+textarea.txt-in {
+  height: auto; min-height: 56px; padding: 8px 10px;
+  resize: none; line-height: 1.4;
+}
+
+/* ─── Step list (right panel) ───────────────────────── */
+.step-btn {
+  width: 100%; padding: 8px 10px;
+  border-radius: 8px; border: 1px solid rgba(0,0,0,0.07);
+  background: transparent; font-family: var(--font);
+  cursor: pointer; transition: all 0.18s; text-align: left; line-height: 1.3;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.step-btn:hover { background: rgba(0,0,0,0.04); }
+.step-btn.on    { background: var(--text); color: #fff; border-color: var(--text); }
+.step-btn .sn { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); }
+.step-btn.on .sn { color: rgba(255,255,255,0.55); }
+.step-btn .st { font-size: 11px; font-weight: 500; color: var(--text); }
+.step-btn.on .st { color: #fff; }
+
+/* ─── Action buttons ────────────────────────────────── */
+.ex-btn {
+  width: 100%; height: 30px; padding: 0 10px;
+  background: var(--text); color: #fff; border: none;
+  border-radius: 8px; font-family: var(--font);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  cursor: pointer; transition: opacity 0.18s; text-align: left; line-height: 1;
+}
+.ex-btn:hover { opacity: .75; }
+.ex-ghost {
+  width: 100%; height: 30px; padding: 0 10px;
+  background: transparent; color: var(--muted);
+  border: 1px solid rgba(0,0,0,0.12); border-radius: 8px;
+  font-family: var(--font); font-size: 10px; font-weight: 500;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: all 0.18s; text-align: left; line-height: 1;
+}
+.ex-ghost:hover { border-color: var(--text); color: var(--text); }
+
+/* ─── Center stage ──────────────────────────────────── */
+#center {
+  position: absolute; inset: 70px 240px 90px 240px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+#image-zone {
+  flex: 0 0 38%;
+  border: 1.5px dashed rgba(0,0,0,0.18);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.45);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+#image-zone.dragging { border-color: var(--accent); background: rgba(50,238,102,0.08); }
+#image-zone.has-image { border-style: solid; border-color: rgba(0,0,0,0.10); cursor: default; }
+#image-zone img {
+  width: 100%; height: 100%; object-fit: contain;
+  display: block;
+}
+#drop-hint {
+  text-align: center; color: var(--muted); pointer-events: none;
+  display: flex; flex-direction: column; gap: 6px;
+}
+#drop-hint .big {
+  font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em;
+}
+#drop-hint .small {
+  font-size: 10.5px; color: var(--muted); letter-spacing: 0.04em;
+}
+#image-zone.has-image #drop-hint { display: none; }
+#img-replace {
+  position: absolute; top: 10px; right: 10px;
+  display: none;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: 100px; padding: 5px 12px;
+  font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text); cursor: pointer;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+#image-zone.has-image #img-replace { display: block; }
+#img-replace:hover { background: #fff; }
+
+#prompt-zone {
+  flex: 1;
+  background: var(--glass);
+  backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 18px 20px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+  min-height: 0;
+}
+#prompt-head {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+#prompt-head .label {
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.10em;
+  text-transform: uppercase; color: var(--muted);
+}
+#prompt-head .copy-mini {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text);
+  background: transparent; border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 100px; padding: 5px 12px; cursor: pointer;
+  transition: all 0.18s;
+}
+#prompt-head .copy-mini:hover { background: var(--text); color: #fff; }
+#prompt-head .copy-mini.copied { background: var(--accent); color: #1a1a1a; border-color: var(--accent); }
+#prompt-text {
+  flex: 1; min-height: 0;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+  font-size: 12px; line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap; word-break: break-word;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+#prompt-text::-webkit-scrollbar { width: 4px; }
+#prompt-text::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
+.tk { color: var(--accent); font-weight: 600; background: rgba(50,238,102,0.12); padding: 0 4px; border-radius: 3px; }
+
+#toast {
+  position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #fff;
+  padding: 8px 18px; border-radius: 100px;
+  font-size: 10px; font-weight: 500; letter-spacing: 0.10em; text-transform: uppercase;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  z-index: 20;
+}
+#toast.on { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+/* ─── Responsive shrink ─────────────────────────────── */
+@media (max-width: 980px) {
+  .fbox { width: 170px; }
+  #center { inset: 70px 210px 90px 210px; }
+}
+@media (max-width: 800px) {
+  html, body { overflow: auto; }
+  .fbox { position: static; transform: none; width: 100%; max-width: 480px; margin: 16px auto; max-height: none; }
+  #center { position: static; inset: auto; margin: 0 auto; max-width: 720px; padding: 16px; }
+  #bottom-btns { position: static; transform: none; margin: 16px auto; }
+}
+</style>
+</head>
+<body>
+
+<div id="logo">
+  <div id="logo-text">CampaignEngine</div>
+  <div id="logo-sub">by tropicOS</div>
+</div>
+
+<div id="step-indicator">
+  <span class="step-num">step <span id="ind-num">01</span> / 05</span>
+  <span class="dot"></span>
+  <span class="step-title" id="ind-title">reference deconstruction</span>
+</div>
+
+<!-- LEFT: Inputs -->
+<div class="fbox" id="bar-left">
+
+  <div class="bs">
+    <div class="bl">Brand A</div>
+    <input type="text" class="txt-in" id="in-brand-a" placeholder="Gucci" autocomplete="off">
+  </div>
+
+  <div class="bd"></div>
+
+  <div class="bs">
+    <div class="bl">Brand B <span style="color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400">— colab</span></div>
+    <input type="text" class="txt-in" id="in-brand-b" placeholder="Crocs (optional)" autocomplete="off">
+  </div>
+
+  <div class="bd"></div>
+
+  <div class="bs">
+    <div class="bl">Vibe</div>
+    <textarea class="txt-in" id="in-vibe" rows="3" placeholder="luxury × streetwear tension"></textarea>
+  </div>
+
+  <div class="bd"></div>
+
+  <div class="bs">
+    <div class="bl">Reference</div>
+    <input type="file" id="img-input" accept="image/*" style="display:none">
+    <button class="ex-ghost" id="btn-upload">↑ Upload image</button>
+    <button class="ex-ghost" id="btn-clear-img" style="display:none">↺ Clear image</button>
+    <div style="font-size:9px;color:var(--muted);line-height:1.4;margin-top:2px">drag, click or paste (⌘V)</div>
+  </div>
+
+</div>
+
+<!-- CENTER: image + prompt -->
+<div id="center">
+  <div id="image-zone">
+    <div id="drop-hint">
+      <div class="big">drop reference image</div>
+      <div class="small">or click — or paste with ⌘V</div>
+    </div>
+    <button id="img-replace">replace</button>
+  </div>
+
+  <div id="prompt-zone">
+    <div id="prompt-head">
+      <div class="label" id="prompt-label">prompt 01 — reference deconstruction</div>
+      <button class="copy-mini" id="btn-copy-mini">copy</button>
+    </div>
+    <div id="prompt-text"></div>
+  </div>
+</div>
+
+<!-- RIGHT: Steps + Export -->
+<div class="fbox" id="bar-right">
+
+  <div class="bs">
+    <div class="bl">Workflow</div>
+    <div id="step-list" style="display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+
+  <div class="bd"></div>
+
+  <div class="bs">
+    <div class="bl">Export</div>
+    <button class="ex-btn" id="btn-copy-all">⎘ Copy all prompts</button>
+    <button class="ex-ghost" id="btn-export-md">↓ Export brief.md</button>
+  </div>
+
+  <div class="bd"></div>
+
+  <div class="bs">
+    <div class="bl">How</div>
+    <div style="font-size:10px;line-height:1.5;color:var(--muted)">
+      paste each prompt into your AI of choice (ChatGPT, Sora, Nano Banana, LTX). attach the reference image at step 01.
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM nav -->
+<div id="bottom-btns">
+  <button class="bb" id="btn-prev">← prev</button>
+  <button class="bb primary-morph" id="btn-copy">⎘ copy prompt</button>
+  <button class="bb" id="btn-next">next →</button>
+</div>
+
+<div id="toast">copied</div>
+
+<script>
+// ─── Prompt templates (verbatim from the article) ──────────────
+const STEPS = [
+  {
+    key: 'reference',
+    title: 'reference deconstruction',
+    label: 'extracts the creative system from your ref image',
+    build: (s) => `You are a world-class Creative Director and Brand Designer working at a top-tier agency.
+
+Using the provided reference image as the source of truth, create a clean 4:3 visual brand board.
+
+Do NOT copy the reference directly. Extract and rebuild its underlying creative system:
+
+* core idea and creative tension
+* color and material language
+* typography direction
+* image and composition logic
+* signature visual device
+* layout/grid system
+* scalable campaign applications
+
+The output must be a polished visual brand board, not a text-heavy document.
+
+Design direction:
+
+* premium editorial layout
+* clear modular grid
+* strong hero visual area
+* limited, readable labels only
+* large visual tiles
+* minimal micro-copy
+* no overcrowding
+* no overlapping text on active backgrounds
+* clean margins and consistent spacing
+
+The board should feel like a professional agency campaign direction slide: visual, structured, immediately understandable, and ready to use as the foundation for a full brand campaign.`
+  },
+  {
+    key: 'concept',
+    title: 'concept transfer',
+    label: 'applies the system to your brand',
+    build: (s) => {
+      const brand = brandToken(s);
+      const vibeLine = s.vibe.trim() ? `\n\nDesign tension to embody: ${s.vibe.trim()}` : '';
+      return `recreate the whole campaign document for ${brand}
+imaginary collab campaign,
+using the source image I provided as a material & vibe reference,
+but rebuild it completely according to new brands' visual aesthetic
+and brand guidelines,
+be especially careful with brands' fonts consistency and accuracy${vibeLine}`;
+    }
+  },
+  {
+    key: 'assets',
+    title: 'asset moodboard',
+    label: 'bento of banners, posts, mockups',
+    build: (s) => `Now create me a moodboard of actual visual assets for this campaign:
+* digital banners,
+* social media banners & posts,
+* ad materials,
+* aesthetical assets
+etc
+
+avoid overlapping text layers over active backgrounds
+
+make 30% less images, but make them tighter
+and looking more like a bento grid`
+  },
+  {
+    key: 'brief',
+    title: 'brief slide',
+    label: 'lock the vision — brief + idea + goals',
+    build: (s) => `now create me a slide with this campaign's
+* brief,
+* idea
+* and goals`
+  },
+  {
+    key: 'keyvisual',
+    title: 'key visual',
+    label: 'cover art — Forbes / Esquire level',
+    build: (s) => `now create a clean image slide with
+a photo scene of campaign-relevant characters
+positioned in a campaign-relevant surrounding
+with campaign slogan positioned on top of the photograph
+in a fashion-magazine typography design style and level
+
+act as a world class art director
+presenting the campaign with a single visual slide:
+the key visual that deserves to be on the first page of
+Forbes or Esquire magazines
+
+I don't need an overwhelmed tech slide,
+I need a cover art for the whole campaign`
+  }
+];
+
+function brandToken(s) {
+  const a = s.brandA.trim();
+  const b = s.brandB.trim();
+  if (a && b) return `[${a} × ${b}]`;
+  if (a)      return `[${a}]`;
+  return '[INSERT ANY BRAND HERE]';
+}
+
+// ─── State ────────────────────────────────────────────────────
+const state = {
+  brandA: '',
+  brandB: '',
+  vibe: '',
+  imageDataUrl: null,
+  imageName: null,
+  current: 0,
+};
+
+// ─── DOM ──────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const inA = $('in-brand-a'), inB = $('in-brand-b'), inV = $('in-vibe');
+const imageZone = $('image-zone'), dropHint = $('drop-hint'), imgReplace = $('img-replace');
+const imgInput = $('img-input'), btnUpload = $('btn-upload'), btnClearImg = $('btn-clear-img');
+const promptText = $('prompt-text'), promptLabel = $('prompt-label');
+const btnCopy = $('btn-copy'), btnCopyMini = $('btn-copy-mini');
+const btnPrev = $('btn-prev'), btnNext = $('btn-next');
+const btnCopyAll = $('btn-copy-all'), btnExportMd = $('btn-export-md');
+const stepList = $('step-list');
+const indNum = $('ind-num'), indTitle = $('ind-title');
+const toast = $('toast');
+
+// ─── Render ───────────────────────────────────────────────────
+function renderStepList() {
+  stepList.innerHTML = '';
+  STEPS.forEach((step, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'step-btn' + (i === state.current ? ' on' : '');
+    btn.innerHTML = `<span class="sn">${String(i+1).padStart(2,'0')}</span><span class="st">${step.title}</span>`;
+    btn.addEventListener('click', () => { state.current = i; renderAll(); });
+    stepList.appendChild(btn);
+  });
+}
+
+function renderPrompt() {
+  const step = STEPS[state.current];
+  const text = step.build(state);
+  // Highlight brand token visually
+  const token = brandToken(state);
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const tokenEsc = token.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const html = escaped.split(tokenEsc).join(`<span class="tk">${tokenEsc}</span>`);
+  promptText.innerHTML = html;
+  promptLabel.textContent = `prompt ${String(state.current+1).padStart(2,'0')} — ${step.title}`;
+  indNum.textContent = String(state.current+1).padStart(2,'0');
+  indTitle.textContent = step.title;
+  btnPrev.disabled = state.current === 0;
+  btnNext.disabled = state.current === STEPS.length - 1;
+}
+
+function renderImage() {
+  // Clear any existing img child first (keep dropHint and imgReplace)
+  imageZone.querySelectorAll('img').forEach(n => n.remove());
+  if (state.imageDataUrl) {
+    const img = document.createElement('img');
+    img.src = state.imageDataUrl;
+    imageZone.insertBefore(img, dropHint);
+    imageZone.classList.add('has-image');
+    btnClearImg.style.display = 'block';
+    btnUpload.textContent = '↑ Replace image';
+  } else {
+    imageZone.classList.remove('has-image');
+    btnClearImg.style.display = 'none';
+    btnUpload.textContent = '↑ Upload image';
+  }
+}
+
+function renderAll() {
+  renderStepList();
+  renderPrompt();
+  renderImage();
+}
+
+// ─── Inputs ───────────────────────────────────────────────────
+inA.addEventListener('input', e => { state.brandA = e.target.value; renderPrompt(); });
+inB.addEventListener('input', e => { state.brandB = e.target.value; renderPrompt(); });
+inV.addEventListener('input', e => { state.vibe   = e.target.value; renderPrompt(); });
+
+// ─── Image upload ─────────────────────────────────────────────
+function loadFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    state.imageDataUrl = ev.target.result;
+    state.imageName = file.name || 'reference';
+    renderImage();
+  };
+  reader.readAsDataURL(file);
+}
+btnUpload.addEventListener('click', () => imgInput.click());
+imageZone.addEventListener('click', (e) => {
+  if (state.imageDataUrl) return;
+  imgInput.click();
+});
+imgReplace.addEventListener('click', (e) => { e.stopPropagation(); imgInput.click(); });
+imgInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
+btnClearImg.addEventListener('click', () => {
+  state.imageDataUrl = null; state.imageName = null;
+  imgInput.value = '';
+  renderImage();
+});
+
+// Drag-and-drop
+['dragenter','dragover'].forEach(evt =>
+  imageZone.addEventListener(evt, (e) => { e.preventDefault(); imageZone.classList.add('dragging'); })
+);
+['dragleave','drop'].forEach(evt =>
+  imageZone.addEventListener(evt, (e) => { e.preventDefault(); imageZone.classList.remove('dragging'); })
+);
+imageZone.addEventListener('drop', (e) => {
+  const file = e.dataTransfer.files && e.dataTransfer.files[0];
+  loadFile(file);
+});
+
+// Paste from clipboard
+window.addEventListener('paste', (e) => {
+  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type && item.type.startsWith('image/')) {
+      loadFile(item.getAsFile());
+      e.preventDefault();
+      return;
+    }
+  }
+});
+
+// ─── Navigation ───────────────────────────────────────────────
+btnPrev.addEventListener('click', () => { if (state.current > 0) { state.current--; renderAll(); } });
+btnNext.addEventListener('click', () => { if (state.current < STEPS.length - 1) { state.current++; renderAll(); } });
+window.addEventListener('keydown', (e) => {
+  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+  if (e.key === 'ArrowLeft' && state.current > 0) { state.current--; renderAll(); }
+  if (e.key === 'ArrowRight' && state.current < STEPS.length - 1) { state.current++; renderAll(); }
+});
+
+// ─── Copy ─────────────────────────────────────────────────────
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('on');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('on'), 1400);
+}
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('copied'))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); ta.remove();
+      showToast('copied');
+    });
+}
+function currentPromptText() { return STEPS[state.current].build(state); }
+btnCopy.addEventListener('click', () => copyText(currentPromptText()));
+btnCopyMini.addEventListener('click', () => {
+  copyText(currentPromptText());
+  btnCopyMini.classList.add('copied');
+  btnCopyMini.textContent = 'copied';
+  clearTimeout(btnCopyMini._t);
+  btnCopyMini._t = setTimeout(() => {
+    btnCopyMini.classList.remove('copied');
+    btnCopyMini.textContent = 'copy';
+  }, 1400);
+});
+
+btnCopyAll.addEventListener('click', () => {
+  const all = STEPS.map((s, i) =>
+    `─── PROMPT ${String(i+1).padStart(2,'0')} — ${s.title.toUpperCase()} ───\n\n${s.build(state)}`
+  ).join('\n\n\n');
+  copyText(all);
+});
+
+// ─── Export brief.md ──────────────────────────────────────────
+btnExportMd.addEventListener('click', () => {
+  const stamp = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const a = state.brandA.trim() || '(brand A)';
+  const b = state.brandB.trim();
+  const vibe = state.vibe.trim() || '—';
+  const refLine = state.imageName ? `\`${state.imageName}\` (attached separately)` : '_none uploaded_';
+
+  let md = `# Campaign Brief\n\n`;
+  md += `> Generated with **Campaign Engine** — tropicOS · ${stamp}\n\n`;
+  md += `## Inputs\n\n`;
+  md += `- **Brand A**: ${a}\n`;
+  md += `- **Brand B**: ${b || '_(none)_'}\n`;
+  md += `- **Vibe**: ${vibe}\n`;
+  md += `- **Reference image**: ${refLine}\n\n`;
+  md += `---\n\n`;
+  md += `## Workflow — 5 prompts (in order)\n\n`;
+  md += `Paste each prompt into your AI of choice (ChatGPT / Sora / Nano Banana / LTX). Attach the reference image at step 01.\n\n`;
+  STEPS.forEach((s, i) => {
+    md += `### ${String(i+1).padStart(2,'0')}. ${s.title}\n\n`;
+    md += `_${s.label}_\n\n`;
+    md += '```text\n' + s.build(state) + '\n```\n\n';
+  });
+  md += `---\n\n_Workflow based on the "image-to-engine" method by @AmirMushich._\n`;
+
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const slug = (a + (b ? '-x-' + b : '')).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'campaign';
+  link.href = url; link.download = `${slug}-brief.md`;
+  document.body.appendChild(link); link.click(); link.remove();
+  URL.revokeObjectURL(url);
+  showToast('brief.md downloaded');
+});
+
+// ─── Init ─────────────────────────────────────────────────────
+renderAll();
+</script>
+
+</body>
+</html>
