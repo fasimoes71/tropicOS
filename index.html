@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tropicOS — tools</title>
+<style>
+  @font-face {
+    font-family: 'PPFragment';
+    src: url('./plataforma/fonts/PPFragment-SerifLight.woff') format('woff');
+    font-weight: 300; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Ekstra';
+    src: url('./plataforma/fonts/Ekstra-Regular.otf') format('opentype');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Ekstra';
+    src: url('./plataforma/fonts/Ekstra-Medium.otf') format('opentype');
+    font-weight: 500; font-style: normal; font-display: swap;
+  }
+  :root {
+    --bg: #fafafa;
+    --fg: #111;
+    --muted: #666;
+    --line: #e5e5e5;
+    --hover: #f0f0f0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Ekstra', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 80px 32px 120px;
+  }
+  header { margin-bottom: 64px; }
+  .logo {
+    height: 24px;
+    margin-bottom: 32px;
+    display: block;
+  }
+  h1 {
+    font-family: 'PPFragment', Georgia, serif;
+    font-weight: 300;
+    font-size: 48px;
+    line-height: 1.1;
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
+  }
+  .lead {
+    color: var(--muted);
+    font-size: 17px;
+    margin: 0;
+    max-width: 560px;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin: 56px 0 16px;
+  }
+  .featured {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 28px;
+    background: #fff;
+    transition: border-color .15s, transform .15s;
+  }
+  .featured:hover { border-color: var(--fg); }
+  .featured .name {
+    font-family: 'PPFragment', Georgia, serif;
+    font-weight: 300;
+    font-size: 28px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .featured .desc { color: var(--muted); margin: 0; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .grid a {
+    background: #fff;
+    text-decoration: none;
+    color: inherit;
+    padding: 20px;
+    display: block;
+    transition: background .15s;
+  }
+  .grid a:hover { background: var(--hover); }
+  .grid .name {
+    font-weight: 500;
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+  .grid .desc {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0;
+  }
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="./plataforma/assets/logo-wordmark-gradient.svg" alt="tropicOS" class="logo" onerror="this.style.display='none'">
+    <h1>tropicOS — tools</h1>
+    <p class="lead">Coleção de ferramentas criativas. Comece pela Plataforma se quiser uma visão geral, ou abra direto a ferramenta que precisar.</p>
+  </header>
+
+  <div class="section-label">Comece por aqui</div>
+  <a href="./plataforma/library.html" class="featured">
+    <p class="name">Plataforma tropicOS</p>
+    <p class="desc">Library completa com todas as tools, organizadas por categoria.</p>
+  </a>
+
+  <div class="section-label">Ferramentas</div>
+  <div class="grid">
+    <a href="./layout/">
+      <p class="name">Layout</p>
+      <p class="desc">Gerador editorial de layouts.</p>
+    </a>
+    <a href="./prompt-studio/">
+      <p class="name">Prompt Studio</p>
+      <p class="desc">Biblioteca de prompts e skills.</p>
+    </a>
+    <a href="./creative-workflow/">
+      <p class="name">Creative Workflow</p>
+      <p class="desc">Workflow criativo por skill.</p>
+    </a>
+    <a href="./story-arc/">
+      <p class="name">Story Arc</p>
+      <p class="desc">Estrutura narrativa para campanha.</p>
+    </a>
+    <a href="./card-studio/">
+      <p class="name">Card Studio</p>
+      <p class="desc">Editor de cards.</p>
+    </a>
+    <a href="./morph-studio/">
+      <p class="name">Morph Studio</p>
+      <p class="desc">Morph e transição visual.</p>
+    </a>
+    <a href="./campaign-engine/">
+      <p class="name">Campaign Engine</p>
+      <p class="desc">Geração de campanha image-to-image.</p>
+    </a>
+  </div>
+
+  <footer>
+    tropicOS · <a href="https://github.com/fasimoes71/tropicOS">github</a>
+  </footer>
+</div>
+</body>
+</html>

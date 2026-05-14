@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --glass:        rgba(255,255,255,0.90);
+  --glass-border: rgba(0,0,0,0.13);
+  --text:         #1a1a1a;
+  --muted:        #6a6a6a;
+  --font:         'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: #f7f7f9;
+  font-family: var(--font);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Canvas wrap ─────────────────────────────────── */
+#wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#three-canvas { display: block; }
+
+/* ─── Logo ────────────────────────────────────────── */
+#logo {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 10;
+}
+#logo img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}
+#logo-labels { display: flex; flex-direction: column; gap: 1px; }
+#logo-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  line-height: 1;
+}
+#logo-sub {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* ─── Collapsible section header ─────────────────── */
+.bs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.bs-toggle {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: transform 0.25s;
+  flex-shrink: 0;
+}
+.bs-toggle::before {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-right: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -2px);
+}
+.bs.collapsed .bs-toggle { transform: rotate(-90deg); }
+.bs.collapsed .pr        { display: none; }
+
+/* ─── Mode toggle ─────────────────────────────────── */
+#mode-toggle {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--glass);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--glass-border);
+  border-radius: 100px;
+  padding: 3px;
+  z-index: 10;
+}
+.mtbtn {
+  font-family: var(--font);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 5px 13px;
+  border-radius: 100px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.18s;
+  line-height: 1;
+}
+.mtbtn.on { background: var(--text); color: #fff; }
+
+/* ─── Floating boxes ──────────────────────────────── */
+.fbox {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 152px;
+  background: var(--glass);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 18px 14px;
+  z-index: 10;
+  box-shadow:
+    0 16px 56px rgba(0,0,0,0.13),
+    0 1px 0 rgba(255,255,255,0.70) inset;
+  gap: 0;
+}
+#bar-left  { left: 20px; }
+#bar-right { right: 20px; }
+
+/* Bar section */
+.bs {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 12px 0;
+}
+.bs:first-child { padding-top: 0; }
+.bs:last-child  { padding-bottom: 0; }
+
+/* Section label */
+.bl {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1;
+}
+
+/* Divider */
+.bd {
+  width: 100%;
+  height: 1px;
+  background: rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+
+/* Pill row */
+.pr { display: flex; flex-direction: column; gap: 3px; }
+
+/* Preset pills — light / finish */
+.pbtn {
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.07);
+  background: transparent;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  line-height: 1;
+}
+.pbtn:hover { background: rgba(0,0,0,0.04); color: var(--text); }
+.pbtn.on    { background: var(--text); color: #fff; border-color: var(--text); }
+
+/* Upload pills */
+.ubtn {
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px dashed rgba(0,0,0,0.18);
+  background: transparent;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s;
+  position: relative;
+  overflow: hidden;
+  line-height: 1;
+}
+.ubtn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.ubtn:hover  { border-color: var(--text); color: var(--text); background: rgba(0,0,0,0.03); }
+.ubtn.filled { border-style: solid; border-color: #22c55e; color: #22c55e; }
+
+/* Count row for multi mode */
+.count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  background: rgba(0,0,0,0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.07);
+  padding: 0 4px;
+}
+.cnt-btn {
+  width: 22px; height: 22px;
+  border: none; background: transparent;
+  color: var(--muted); cursor: pointer;
+  font-size: 16px; font-family: var(--font);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 5px; transition: all 0.15s;
+  line-height: 1; padding: 0;
+}
+.cnt-btn:hover { background: rgba(0,0,0,0.08); color: var(--text); }
+#cnt-display {
+  font-size: 12px; font-weight: 500;
+  color: var(--text); min-width: 22px; text-align: center;
+  cursor: text; outline: none; border-radius: 3px;
+  transition: background 0.15s;
+}
+#cnt-display:focus {
+  background: rgba(0,0,0,0.07);
+}
+
+/* Layout toggle (Line / Ring) */
+.layout-toggle {
+  display: flex; gap: 2px; background: rgba(0,0,0,0.06);
+  border-radius: 7px; padding: 2px;
+}
+.lt-btn {
+  flex: 1; height: 22px; border: none; background: transparent;
+  font-family: var(--font); font-size: 9.5px; font-weight: 600;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+  border-radius: 5px; cursor: pointer; transition: all 0.18s;
+}
+.lt-btn.on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+/* Multi param sliders */
+.ms-row {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ms-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ms-lbl {
+  font-size: 9px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.ms-val {
+  font-size: 10px; font-weight: 600; color: var(--text);
+  width: 44px; text-align: right;
+  border: none; background: transparent; outline: none;
+  font-family: var(--font); padding: 0; cursor: default;
+  border-radius: 4px;
+  -moz-appearance: textfield;
+}
+.ms-val::-webkit-inner-spin-button,
+.ms-val::-webkit-outer-spin-button { -webkit-appearance: none; }
+.ms-val:focus {
+  background: rgba(0,0,0,0.06); cursor: text;
+  outline: none;
+}
+.multi-reset {
+  width: 22px; height: 22px; display: flex; align-items: center;
+  justify-content: center; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 16px;
+  border-radius: 4px; padding: 0; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.multi-reset:hover { background: rgba(0,0,0,0.07); color: var(--text); }
+.ms-row input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 3px; border-radius: 2px;
+  background: rgba(0,0,0,0.14); outline: none;
+  cursor: pointer; margin: 0;
+}
+.ms-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--text); cursor: pointer;
+}
+
+/* Background swatches */
+.sw-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sw {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.18s;
+  flex-shrink: 0;
+}
+.sw:hover { transform: scale(1.1); }
+.sw.on {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 0 0 3.5px var(--text);
+}
+
+/* Export section */
+.export-row { display: flex; flex-direction: column; gap: 8px; }
+
+/* Toggle switch */
+.tog {
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+}
+.tog input { position: absolute; opacity: 0; width: 0; height: 0; }
+.tog-lbl {
+  font-size: 9px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.tog-track {
+  position: relative; width: 30px; height: 17px; border-radius: 9px;
+  background: rgba(0,0,0,0.14); transition: background 0.22s; flex-shrink: 0;
+}
+.tog-track::after {
+  content: ''; position: absolute; top: 2.5px; left: 2.5px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.22s;
+}
+.tog input:checked ~ .tog-track { background: var(--text); }
+.tog input:checked ~ .tog-track::after { transform: translateX(13px); }
+
+#dl-btn {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.18s;
+  line-height: 1;
+  text-align: left;
+}
+#dl-btn:hover  { opacity: 0.78; }
+#dl-btn:active { opacity: 0.55; }
+
+/* ─── Dark UI overrides ───────────────────────────── */
+body.dark-ui #logo-text { color: rgba(255,255,255,0.88); }
+body.dark-ui #logo-sub  { color: rgba(255,255,255,0.40); }
+
+/* ─── Hints ───────────────────────────────────────── */
+#hint-text {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: rgba(0,0,0,0.18);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  z-index: 5;
+  white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<div id="logo">
+  <img src="../prompt-studio/Logo_03.png" alt="TropicOS">
+  <div id="logo-labels">
+    <div id="logo-text">CardStudio</div>
+    <div id="logo-sub">by TropicOS</div>
+  </div>
+</div>
+
+<!-- Mode toggle — top right -->
+<div id="mode-toggle">
+  <button class="mtbtn" data-mode="camera">Orbit</button>
+  <button class="mtbtn on" data-mode="card">Rotate</button>
+</div>
+
+<!-- Canvas -->
+<div id="wrap">
+  <canvas id="three-canvas"></canvas>
+</div>
+
+<!-- Hint -->
+<div id="hint-text">drag to rotate  ·  scroll to zoom  ·  double-click to reset</div>
+
+<!-- ══ BOX ESQUERDO: Upload + Finish ══════════════════════════════════════ -->
+<div class="fbox" id="bar-left">
+
+  <!-- Upload -->
+  <div class="bs">
+    <div class="bl">Upload</div>
+    <div class="pr">
+      <label class="ubtn" id="zone-front">
+        <input type="file" accept="image/*" id="file-front">
+        <span>↑</span><span id="front-name">Front</span>
+      </label>
+      <label class="ubtn" id="zone-back">
+        <input type="file" accept="image/*" id="file-back">
+        <span>↑</span><span id="back-name">Back</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="bd"></div>
+
+  <!-- Finish -->
+  <div class="bs collapsible">
+    <div class="bs-header">
+      <div class="bl">Finish</div>
+      <span class="bs-toggle"></span>
+    </div>
+    <div class="pr">
+      <button class="pbtn"    data-finish="matte">Matte</button>
+      <button class="pbtn"    data-finish="glossy">Glossy</button>
+      <button class="pbtn on" data-finish="metal">Metal</button>
+      <button class="pbtn"    data-finish="gold">Gold</button>
+      <button class="pbtn"    data-finish="holo">Holo</button>
+      <button class="pbtn"    data-finish="chrome">Chrome</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ BOX DIREITO: Light + Studio + Export ══════════════════════════════ -->
+<div class="fbox" id="bar-right">
+
+  <!-- Light presets -->
+  <div class="bs collapsible">
+    <div class="bs-header">
+      <div class="bl">Light</div>
+      <span class="bs-toggle"></span>
+    </div>
+    <div class="pr">
+      <button class="pbtn on" data-light="natural">Natural</button>
+      <button class="pbtn"    data-light="side">Side</button>
+      <button class="pbtn"    data-light="glow">Glow</button>
+      <button class="pbtn"    data-light="beauty">Beauty</button>
+      <button class="pbtn"    data-light="amber">Amber</button>
+    </div>
+  </div>
+
+  <div class="bd"></div>
+
+  <!-- Studio / Background -->
+  <div class="bs">
+    <div class="bl">Studio</div>
+    <div class="sw-row">
+      <div class="sw on" data-env="white" style="background:#f3f3f5; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.13);"></div>
+      <div class="sw"    data-env="grey"  style="background:#a0a0a0;"></div>
+      <div class="sw"    data-env="dark"  style="background:#111111;"></div>
+      <div class="sw"    data-env="blue"  style="background:#3640e0;"></div>
+      <div class="sw"    data-env="halftone" style="background:radial-gradient(circle at 30% 30%, #ff7a00 18%, transparent 18%), radial-gradient(circle at 70% 70%, #ff7a00 18%, transparent 18%), #eb84bb;"></div>
+    </div>
+    <label class="tog" style="margin-top:8px;">
+      <span class="tog-lbl">Floor</span>
+      <input type="checkbox" id="floor-toggle" checked>
+      <span class="tog-track"></span>
+    </label>
+  </div>
+
+  <div class="bd"></div>
+
+  <!-- Multi-card -->
+  <div class="bs collapsible">
+    <div class="bs-header">
+      <div class="bl">Multi</div>
+      <div style="display:flex;align-items:center;gap:2px;">
+        <button class="multi-reset" id="multi-reset" title="Reset">↺</button>
+        <span class="bs-toggle"></span>
+      </div>
+    </div>
+    <div class="pr">
+      <div class="count-row">
+        <button class="cnt-btn" id="cnt-minus">−</button>
+        <span id="cnt-display" contenteditable="true" spellcheck="false">1</span>
+        <button class="cnt-btn" id="cnt-plus">+</button>
+      </div>
+      <div class="layout-toggle">
+        <button class="lt-btn on" id="lt-line">Line</button>
+        <button class="lt-btn"    id="lt-ring">Ring</button>
+      </div>
+      <div class="ms-row" id="row-radius" style="display:none;">
+        <div class="ms-hdr">
+          <span class="ms-lbl">Radius</span>
+          <input type="number" class="ms-val" id="radius-val" value="3.0" min="0.5" max="12.0" step="0.1">
+        </div>
+        <input type="range" id="multi-radius" min="0.5" max="12.0" step="0.1" value="3.0">
+      </div>
+      <div class="ms-row" id="row-xoff">
+        <div class="ms-hdr">
+          <span class="ms-lbl">X offset</span>
+          <input type="number" class="ms-val" id="xoff-val" value="0.80" min="-3.0" max="3.0" step="0.05">
+        </div>
+        <input type="range" id="multi-xoff" min="-3.0" max="3.0" step="0.05" value="0.8">
+      </div>
+      <div class="ms-row">
+        <div class="ms-hdr">
+          <span class="ms-lbl">Y offset</span>
+          <input type="number" class="ms-val" id="yoff-val" value="0.00" min="-1.5" max="1.5" step="0.05">
+        </div>
+        <input type="range" id="multi-yoff" min="-1.5" max="1.5" step="0.05" value="0.0">
+      </div>
+      <div class="ms-row" id="row-zoff">
+        <div class="ms-hdr">
+          <span class="ms-lbl">Z offset</span>
+          <input type="number" class="ms-val" id="zoff-val" value="0.00" min="-1.0" max="1.0" step="0.05">
+        </div>
+        <input type="range" id="multi-zoff" min="-1.0" max="1.0" step="0.05" value="0.0">
+      </div>
+      <div class="ms-row">
+        <div class="ms-hdr">
+          <span class="ms-lbl">Rot X</span>
+          <input type="number" class="ms-val" id="rotx-val" value="0" min="-45" max="45" step="1">
+        </div>
+        <input type="range" id="multi-rotx" min="-45" max="45" step="1" value="0">
+      </div>
+      <div class="ms-row">
+        <div class="ms-hdr">
+          <span class="ms-lbl">Rot Y</span>
+          <input type="number" class="ms-val" id="roty-val" value="0" min="-90" max="90" step="1">
+        </div>
+        <input type="range" id="multi-roty" min="-90" max="90" step="1" value="0">
+      </div>
+      <div class="ms-row">
+        <div class="ms-hdr">
+          <span class="ms-lbl">Rot Z</span>
+          <input type="number" class="ms-val" id="rotz-val" value="0" min="-45" max="45" step="1">
+        </div>
+        <input type="range" id="multi-rotz" min="-45" max="45" step="1" value="0">
+      </div>
+      <div class="ms-row" id="row-zfac">
+        <div class="ms-hdr">
+          <span class="ms-lbl">Z Depth</span>
+          <input type="number" class="ms-val" id="zfac-val" value="1.0" min="0.5" max="3.0" step="0.1">
+        </div>
+        <input type="range" id="multi-zfac" min="0.5" max="3.0" step="0.1" value="1.0">
+      </div>
+    </div>
+  </div>
+
+  <div class="bd"></div>
+
+  <!-- Export -->
+  <div class="bs">
+    <div class="bl">Export</div>
+    <div class="export-row">
+      <label class="tog">
+        <span class="tog-lbl">Transparent</span>
+        <input type="checkbox" id="transp-toggle">
+        <span class="tog-track"></span>
+      </label>
+      <button id="dl-btn">↓ 4K PNG</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ THREE.JS ════════════════════════════════════════════════════════════ -->
+<script type="importmap">
+{
+  "imports": {
+    "three":          "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/":  "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ─── Error display ──────────────────────────────────────────────────────
+function showErr(e) {
+  document.getElementById('logo').innerHTML =
+    `<span style="color:#e00;font-size:10px;letter-spacing:.03em;font-family:monospace">ERR: ${e}</span>`;
+  console.error('CARD STUDIO:', e);
+}
+window.addEventListener('error', ev => showErr(ev.message));
+window.addEventListener('unhandledrejection', ev => showErr(ev.reason));
+
+// ─── Card constants — portrait (53.98 × 85.6 mm) ───────────────────────
+const CW = 1.35, CH = 2.14, CD = 0.022, CR = 0.13;
+
+// ─── App state ──────────────────────────────────────────────────────────
+const S = {
+  metalness: 0.50, roughness: 0.20, clearcoat: 0.80, iridescence: 0.35,
+  fx: { shadow: true, float: true, shimmer: true, transparent: false, bandActive: false, bandInt: 5.0 },
+};
+
+// ─── Renderer ───────────────────────────────────────────────────────────
+const canvas   = document.getElementById('three-canvas');
+const wrap     = document.getElementById('wrap');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace    = THREE.SRGBColorSpace;
+
+// ─── Scene / Camera ─────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf7f7f9);
+scene.fog        = new THREE.Fog(0xf7f7f9, 12, 38);
+
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
+camera.position.set(0, 0.60, 9.2);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.minDistance   = 2.2;
+controls.maxDistance   = Infinity;
+controls.target.set(0, 0, 0);
+controls.update();
+controls.saveState();
+
+// ─── Environment (IBL) ──────────────────────────────────────────────────
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// ─── Texture helpers ────────────────────────────────────────────────────
+function makeDefaultFront() {
+  const W = 1360, H = 2160;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+
+  // ── Dark slate base
+  c.fillStyle = '#191919';
+  c.fillRect(0, 0, W, H);
+
+  // ── Padrão de linhas finas angulares
+  const spacing = 38;
+  c.save();
+  c.strokeStyle = 'rgba(255,255,255,0.048)';
+  c.lineWidth   = 0.8;
+  const diag = W + H;
+  for (let d = -diag; d < diag; d += spacing) {
+    c.beginPath();
+    c.moveTo(d,     0);
+    c.lineTo(d + H, H);
+    c.stroke();
+  }
+  c.strokeStyle = 'rgba(255,255,255,0.026)';
+  for (let d = 0; d < W + H; d += spacing) {
+    c.beginPath();
+    c.moveTo(d,     0);
+    c.lineTo(d - H, H);
+    c.stroke();
+  }
+  c.restore();
+
+  // ── Vignette
+  const vg = c.createRadialGradient(W*0.5, H*0.45, H*0.15, W*0.5, H*0.5, H*0.72);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+  c.fillStyle = vg;
+  c.fillRect(0, 0, W, H);
+
+  // ── 8-point star — top left, thin, solid, smaller
+  const sx = W * 0.225, sy = H * 0.185, sLen = W * 0.108, sW = W * 0.015;
+  c.lineCap = 'square';
+  c.strokeStyle = 'rgba(215,215,215,0.82)';
+  c.lineWidth = sW;
+  [0, Math.PI/4, Math.PI/2, Math.PI*3/4].forEach(angle => {
+    const x0 = sx - Math.cos(angle)*sLen, y0 = sy - Math.sin(angle)*sLen;
+    const x1 = sx + Math.cos(angle)*sLen, y1 = sy + Math.sin(angle)*sLen;
+    c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+  });
+
+  // ── Two overlapping circles — top right
+  const ccx = W * 0.765, ccy = H * 0.175, cR = W * 0.074, cOff = W * 0.038;
+  c.strokeStyle = 'rgba(205,205,205,0.60)';
+  c.lineWidth = W * 0.006;
+  c.lineCap = 'round';
+  c.beginPath(); c.arc(ccx - cOff, ccy, cR, 0, Math.PI*2); c.stroke();
+  c.beginPath(); c.arc(ccx + cOff, ccy, cR, 0, Math.PI*2); c.stroke();
+
+  // ── Contactless + chip — canto inferior esquerdo
+  const icx = W * 0.27, icy = H * 0.785, baseR = W * 0.020;
+  c.strokeStyle = 'rgba(200,200,200,0.72)';
+  c.lineWidth = W * 0.010;
+  c.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const r = baseR * (i + 1);
+    c.beginPath();
+    c.arc(icx, icy, r, Math.PI * 1.22, Math.PI * 1.78, false);
+    c.stroke();
+  }
+  c.beginPath(); c.arc(icx, icy, W * 0.008, 0, Math.PI*2);
+  c.fillStyle = 'rgba(200,200,200,0.72)'; c.fill();
+
+  // ── EMV chip — logo abaixo do contactless
+  drawChip(c, W * 0.27, H * 0.875, W * 0.200, H * 0.086);
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeDefaultBack() {
+  const W = 1360, H = 2160;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+
+  // ── Dark base
+  c.fillStyle = '#141414';
+  c.fillRect(0, 0, W, H);
+
+  // ── Padrão de linhas angulares
+  const spacing = 38;
+  c.save();
+  c.strokeStyle = 'rgba(255,255,255,0.045)';
+  c.lineWidth   = 0.8;
+  const diag = W + H;
+  for (let d = -diag; d < diag; d += spacing) {
+    c.beginPath(); c.moveTo(d, 0); c.lineTo(d + H, H); c.stroke();
+  }
+  c.strokeStyle = 'rgba(255,255,255,0.024)';
+  for (let d = 0; d < W + H; d += spacing) {
+    c.beginPath(); c.moveTo(d, 0); c.lineTo(d - H, H); c.stroke();
+  }
+  c.restore();
+
+  // ── Vignette
+  const vg = c.createRadialGradient(W*0.5, H*0.5, H*0.2, W*0.5, H*0.5, H*0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.52)');
+  c.fillStyle = vg; c.fillRect(0, 0, W, H);
+
+  // ── Fita magnética (topo)
+  const stripeY = H * 0.10;
+  const stripeH = H * 0.088;
+  c.fillStyle = '#0a0a0a';
+  c.fillRect(0, stripeY, W, stripeH);
+  // Sheen na fita
+  const stripeSheen = c.createLinearGradient(0, stripeY, 0, stripeY + stripeH);
+  stripeSheen.addColorStop(0,   'rgba(255,255,255,0.04)');
+  stripeSheen.addColorStop(0.5, 'rgba(255,255,255,0.0)');
+  stripeSheen.addColorStop(1,   'rgba(255,255,255,0.03)');
+  c.fillStyle = stripeSheen; c.fillRect(0, stripeY, W, stripeH);
+
+  // ── Tarja de assinatura
+  const sigY  = H * 0.26, sigH = H * 0.075;
+  const sigGrad = c.createLinearGradient(0, sigY, 0, sigY + sigH);
+  sigGrad.addColorStop(0, '#e6e2d8');
+  sigGrad.addColorStop(1, '#d4d0c6');
+  c.fillStyle = sigGrad;
+  c.fillRect(W * 0.06, sigY, W * 0.58, sigH);
+  // Linhas horizontais internas da tarja
+  c.strokeStyle = 'rgba(180,170,155,0.5)';
+  c.lineWidth = 1.5;
+  for (let ly = sigY + sigH * 0.25; ly < sigY + sigH; ly += sigH * 0.25) {
+    c.beginPath(); c.moveTo(W*0.06, ly); c.lineTo(W*0.64, ly); c.stroke();
+  }
+
+  // ── Caixa CVV
+  const cvvX = W * 0.68, cvvW = W * 0.26;
+  c.fillStyle = '#f5f3ef';
+  c.fillRect(cvvX, sigY, cvvW, sigH);
+  c.fillStyle = 'rgba(60,55,50,0.7)';
+  c.font = `500 ${H*0.024}px "Helvetica Neue", Helvetica, sans-serif`;
+  c.textAlign = 'center';
+  c.fillText('CVV', cvvX + cvvW / 2, sigY + sigH * 0.62);
+  c.textAlign = 'left';
+
+  // ── Número do cartão (mascarado)
+  c.font      = `300 ${H*0.028}px "Courier New", monospace`;
+  c.fillStyle = 'rgba(200,200,200,0.55)';
+  c.letterSpacing = '0.15em';
+  c.fillText('•••• •••• •••• 9012', W * 0.06, H * 0.42);
+  c.letterSpacing = '0';
+
+  // ── Marca bottom-right
+  c.fillStyle = 'rgba(140,140,140,0.30)';
+  c.font = `300 ${H*0.018}px "Helvetica Neue", Helvetica, sans-serif`;
+  c.textAlign = 'right';
+  c.fillText('card studio', W * 0.94, H * 0.94);
+  c.textAlign = 'left';
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeFromImage(img) {
+  const W = 680, H = 1080;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  const srcR = img.width / img.height;
+  const dstR = W / H;
+  let sx = 0, sy = 0, sw = img.width, sh = img.height;
+  if (srcR > dstR) { sw = img.height * dstR; sx = (img.width - sw) / 2; }
+  else             { sh = img.width  / dstR; sy = (img.height - sh) / 2; }
+  c.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeSideTex() {
+  const cv = document.createElement('canvas');
+  cv.width = 4; cv.height = 4;
+  const c = cv.getContext('2d');
+  c.fillStyle = '#1a1a1a';
+  c.fillRect(0, 0, 4, 4);
+  return new THREE.CanvasTexture(cv);
+}
+
+function drawChip(ctx, cx, cy, w, h) {
+  const x = cx - w / 2, y = cy - h / 2;
+  const r = Math.max(4, w * 0.055);
+  ctx.save();
+
+  // ── Body gradient — warm gold
+  const bodyGrad = ctx.createLinearGradient(x, y, x + w, y + h);
+  bodyGrad.addColorStop(0,    '#e8cc6a');
+  bodyGrad.addColorStop(0.18, '#f0d878');
+  bodyGrad.addColorStop(0.42, '#c8a030');
+  bodyGrad.addColorStop(0.68, '#ddb848');
+  bodyGrad.addColorStop(1,    '#b08820');
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+
+  // ── Outer border
+  ctx.strokeStyle = 'rgba(90,65,5,0.45)';
+  ctx.lineWidth = Math.max(1, w * 0.012);
+  ctx.stroke();
+
+  // ── Sheen highlight across the top
+  const sheen = ctx.createLinearGradient(x, y, x, y + h * 0.4);
+  sheen.addColorStop(0,   'rgba(255,255,200,0.22)');
+  sheen.addColorStop(1,   'rgba(255,255,200,0)');
+  ctx.fillStyle = sheen;
+  ctx.fill();
+
+  // ── Contact pads — ISO 7816 layout (2 cols × 3 rows, C4/C8 absent)
+  const pw   = w * 0.29;
+  const ph   = h * 0.21;
+  const pr   = Math.max(2, pw * 0.08);
+  const colL = x + w * 0.09;
+  const colR = x + w * 0.60;
+  const row1 = y + h * 0.09;
+  const row2 = row1 + ph + h * 0.095;
+  const row3 = row2 + ph + h * 0.095;
+
+  const pads = [
+    [colL, row1], [colR, row1],
+    [colL, row2], [colR, row2],
+    [colL, row3], [colR, row3],
+  ];
+
+  pads.forEach(([px, py]) => {
+    const padGrad = ctx.createLinearGradient(px, py, px + pw, py + ph);
+    padGrad.addColorStop(0,   '#7a5808');
+    padGrad.addColorStop(0.4, '#9a7010');
+    padGrad.addColorStop(1,   '#6a4a04');
+    ctx.beginPath();
+    ctx.moveTo(px + pr, py);
+    ctx.lineTo(px + pw - pr, py); ctx.quadraticCurveTo(px + pw, py, px + pw, py + pr);
+    ctx.lineTo(px + pw, py + ph - pr); ctx.quadraticCurveTo(px + pw, py + ph, px + pw - pr, py + ph);
+    ctx.lineTo(px + pr, py + ph); ctx.quadraticCurveTo(px, py + ph, px, py + ph - pr);
+    ctx.lineTo(px, py + pr); ctx.quadraticCurveTo(px, py, px + pr, py);
+    ctx.closePath();
+    ctx.fillStyle = padGrad;
+    ctx.fill();
+    // Pad inner highlight
+    ctx.strokeStyle = 'rgba(200,160,30,0.25)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  // ── Circuit traces between pads
+  ctx.strokeStyle = 'rgba(80,55,5,0.35)';
+  ctx.lineWidth   = Math.max(1, w * 0.018);
+  ctx.lineCap = 'round';
+  // Horizontal bridges
+  [[row1, ph], [row2, ph], [row3, ph]].forEach(([ry, pph]) => {
+    ctx.beginPath();
+    ctx.moveTo(colL + pw, ry + pph / 2);
+    ctx.lineTo(colR,      ry + pph / 2);
+    ctx.stroke();
+  });
+  // Vertical traces left col
+  ctx.beginPath(); ctx.moveTo(colL + pw * 0.5, row1 + ph); ctx.lineTo(colL + pw * 0.5, row2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(colL + pw * 0.5, row2 + ph); ctx.lineTo(colL + pw * 0.5, row3); ctx.stroke();
+  // Vertical trace right col (offset for variety)
+  ctx.beginPath(); ctx.moveTo(colR + pw * 0.5, row2 + ph); ctx.lineTo(colR + pw * 0.5, row3); ctx.stroke();
+
+  ctx.restore();
+}
+
+// ─── Card Geometry ───────────────────────────────────────────────────────
+function makeRoundedShape(w, h, r) {
+  const s = new THREE.Shape();
+  s.moveTo(-w/2 + r, -h/2);
+  s.lineTo( w/2 - r, -h/2); s.quadraticCurveTo( w/2, -h/2,  w/2, -h/2 + r);
+  s.lineTo( w/2,  h/2 - r); s.quadraticCurveTo( w/2,  h/2,  w/2 - r,  h/2);
+  s.lineTo(-w/2 + r,  h/2); s.quadraticCurveTo(-w/2,  h/2, -w/2,  h/2 - r);
+  s.lineTo(-w/2, -h/2 + r); s.quadraticCurveTo(-w/2, -h/2, -w/2 + r, -h/2);
+  s.closePath();
+  return s;
+}
+
+let frontTex = makeDefaultFront();
+let backTex  = makeDefaultBack();
+const sideTex = makeSideTex();
+
+function mkMat(map, extra = {}) {
+  return new THREE.MeshPhysicalMaterial({
+    map,
+    metalness: S.metalness,
+    roughness: S.roughness,
+    clearcoat: S.clearcoat,
+    clearcoatRoughness: 0.07,
+    iridescence: S.iridescence,
+    iridescenceIOR: 1.4,
+    iridescenceThicknessRange: [80, 400],
+    envMapIntensity: 1.9,
+    ...extra,
+  });
+}
+
+let frontMat = mkMat(frontTex);
+let backMat  = mkMat(backTex);
+let sideMat  = mkMat(sideTex);
+
+function fixFaceUVs(geo, w, h) {
+  const pos = geo.attributes.position;
+  const uv  = geo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) {
+    uv.setXY(i, (pos.getX(i) + w * 0.5) / w, (pos.getY(i) + h * 0.5) / h);
+  }
+  uv.needsUpdate = true;
+}
+
+function buildCardGroup(fMat, bMat, sMat) {
+  const group = new THREE.Group();
+
+  const bodyGeo = new THREE.ExtrudeGeometry(makeRoundedShape(CW, CH, CR), {
+    depth: CD, bevelEnabled: false, curveSegments: 64,
+  });
+  bodyGeo.center();
+  group.add(new THREE.Mesh(bodyGeo, sMat));
+
+  const fGeo = new THREE.ShapeGeometry(makeRoundedShape(CW, CH, CR), 64);
+  fixFaceUVs(fGeo, CW, CH);
+  const fFaceMat = fMat.clone();
+  fFaceMat.polygonOffset = true;
+  fFaceMat.polygonOffsetFactor = -4;
+  fFaceMat.polygonOffsetUnits  = -4;
+  const fMesh = new THREE.Mesh(fGeo, fFaceMat);
+  fMesh.position.z = CD * 0.5 + 0.0008;   // physically clear of extrude surface
+  group.add(fMesh);
+
+  const bGeo = new THREE.ShapeGeometry(makeRoundedShape(CW, CH, CR), 64);
+  fixFaceUVs(bGeo, CW, CH);
+  const buv = bGeo.attributes.uv;
+  for (let i = 0; i < buv.count; i++) buv.setX(i, 1 - buv.getX(i));
+  buv.needsUpdate = true;
+  const bFaceMat = bMat.clone();
+  bFaceMat.polygonOffset = true;
+  bFaceMat.polygonOffsetFactor = -4;
+  bFaceMat.polygonOffsetUnits  = -4;
+  const bMesh = new THREE.Mesh(bGeo, bFaceMat);
+  bMesh.position.z = -CD * 0.5 - 0.0008;  // physically clear of extrude surface
+  bMesh.rotation.y = Math.PI;
+  group.add(bMesh);
+
+  return { group, fMesh, bMesh, fFaceMat, bFaceMat };
+}
+
+const mainCard = buildCardGroup(frontMat, backMat, sideMat);
+const card     = mainCard.group;
+scene.add(card);
+
+// ─── Floor + shadow ─────────────────────────────────────────────────────
+const PLINTH   = { w: 4.40, h: 0.20, d: 3.40 };
+const plinthTopY = -1.22;
+const floorY     = plinthTopY - PLINTH.h;
+
+// Infinite floor — light, matches white bg
+const infiniteFloorMat = new THREE.MeshStandardMaterial({
+  color: new THREE.Color(0xe2e2e6),
+  roughness: 0.96, metalness: 0.0, envMapIntensity: 0.04,
+});
+const infiniteFloor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), infiniteFloorMat);
+infiniteFloor.rotation.x = -Math.PI / 2;
+infiniteFloor.position.y = floorY;
+scene.add(infiniteFloor);
+
+// Plinth — hidden (clean studio, no pedestal)
+const plinthMat  = new THREE.MeshStandardMaterial({ color: new THREE.Color(0xd0d0d4), roughness: 0.94 });
+const plinthMesh = new THREE.Mesh(new THREE.BoxGeometry(PLINTH.w, PLINTH.h, PLINTH.d), plinthMat);
+plinthMesh.position.y = plinthTopY - PLINTH.h * 0.5;
+plinthMesh.visible = false;
+scene.add(plinthMesh);
+
+// Shadow textures
+function makeRadialShadow(W, H, stops) {
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c  = cv.getContext('2d');
+  const r  = Math.min(W, H) * 0.5;
+  const g  = c.createRadialGradient(W/2, H/2, 0, W/2, H/2, r);
+  stops.forEach(([t, a]) => g.addColorStop(t, `rgba(0,0,0,${a})`));
+  c.fillStyle = g;
+  c.fillRect(0, 0, W, H);
+  return new THREE.CanvasTexture(cv);
+}
+
+// Card shadow — on floor surface
+const cardShadowMat = new THREE.MeshBasicMaterial({
+  map: makeRadialShadow(256, 400, [[0, 0.72], [0.38, 0.35], [0.65, 0.08], [1, 0]]),
+  transparent: true, depthWrite: false, opacity: 0.48,
+});
+const cardShadow = new THREE.Mesh(new THREE.PlaneGeometry(CW * 1.55, CH * 0.52), cardShadowMat);
+cardShadow.rotation.x = -Math.PI / 2;
+cardShadow.position.y  = floorY + 0.002;
+cardShadow.renderOrder = 2;
+scene.add(cardShadow);
+
+// Ambient floor haze
+const floorShadowMat = new THREE.MeshBasicMaterial({
+  map: makeRadialShadow(512, 512, [[0, 0.50], [0.32, 0.22], [0.60, 0.05], [1, 0]]),
+  transparent: true, depthWrite: false, opacity: 0.55,
+});
+const floorShadow = new THREE.Mesh(new THREE.PlaneGeometry(PLINTH.w * 3.2, PLINTH.d * 3.2), floorShadowMat);
+floorShadow.rotation.x = -Math.PI / 2;
+floorShadow.position.y  = floorY + 0.003;
+floorShadow.renderOrder = 1;
+scene.add(floorShadow);
+
+// ─── Lights ─────────────────────────────────────────────────────────────
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0xdde8ff, 0.55);
+fillLight.position.set(-4, 1.5, 2);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.30);
+rimLight.position.set(0, -2, -4);
+scene.add(rimLight);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.18);
+scene.add(ambientLight);
+
+// Shimmer spotlight
+const shimmer = new THREE.SpotLight(0xffffff, 1.0, 14, Math.PI / 5, 0.55);
+scene.add(shimmer);
+scene.add(shimmer.target);
+
+// ─── Band light — focused strip always aimed at card center ──────────────
+const bandLight = new THREE.SpotLight(0xff9944, 0, 10, Math.PI / 20, 0.88);
+bandLight.position.set(0, 1.2, 5.0);
+scene.add(bandLight);
+scene.add(bandLight.target);
+bandLight.target.position.set(0, 0, 0);
+
+// ─── Light presets ───────────────────────────────────────────────────────
+const LIGHT_PRESETS = {
+  natural: {
+    keyInt: 1.8,  keyPos: [1.5,  5.0,  4.5], keyColor: 0xffffff,
+    fillInt: 0.55, fillColor: 0xdde8ff,
+    rimInt: 0.30,
+    ambient: 0.18, shimmer: true, exposure: 1.05,
+  },
+  side: {
+    keyInt: 3.2,  keyPos: [5.0,  3.5,  0.5], keyColor: 0xffffff,
+    fillInt: 0.10, fillColor: 0x4466cc,
+    rimInt: 1.20,
+    ambient: 0.04, shimmer: false, exposure: 0.85,
+  },
+  glow: {
+    keyInt: 0.6,  keyPos: [-0.5, 1.0, -5.0], keyColor: 0xffffff,
+    fillInt: 0.15, fillColor: 0x8899ff,
+    rimInt: 2.80,
+    ambient: 0.05, shimmer: true, exposure: 1.00,
+  },
+  beauty: {
+    keyInt: 2.2,  keyPos: [0.5,  4.0,  6.0], keyColor: 0xfffcf5,
+    fillInt: 0.80, fillColor: 0xffffff,
+    rimInt: 0.20,
+    ambient: 0.30, shimmer: true, exposure: 1.18,
+  },
+  amber: {
+    keyInt: 2.2,  keyPos: [2.5,  5.5,  4.0], keyColor: 0xfff4e6,
+    fillInt: 0.25, fillColor: 0xc0cce8,
+    rimInt: 0.40,
+    ambient: 0.08, shimmer: false, exposure: 1.05,
+    envIntensity: 0.20,
+    bandActive: true, bandColor: 0xff9944, bandInt: 8.0,
+  },
+};
+
+// Smooth lerp targets (values are animated toward these each frame)
+const lightLerp = {
+  keyInt: 1.8, fillInt: 0.55, rimInt: 0.30, ambientInt: 0.18, exposure: 1.05,
+  keyPos:   new THREE.Vector3(1.5, 5.0, 4.5),
+  fillColor: new THREE.Color(0xdde8ff),
+  keyColor:  new THREE.Color(0xffffff),
+};
+
+function applyLightPreset(name) {
+  const p = LIGHT_PRESETS[name];
+  if (!p) return;
+  lightLerp.keyInt    = p.keyInt;
+  lightLerp.fillInt   = p.fillInt;
+  lightLerp.rimInt    = p.rimInt;
+  lightLerp.ambientInt = p.ambient;
+  lightLerp.exposure  = p.exposure;
+  lightLerp.keyPos.set(...p.keyPos);
+  lightLerp.fillColor.setHex(p.fillColor);
+  lightLerp.keyColor.setHex(p.keyColor);
+  S.fx.shimmer = p.shimmer;
+  shimmer.angle    = Math.PI / 5;
+  shimmer.penumbra = 0.55;
+  shimmer.color.setHex(0xffffff);
+  S.fx.shimmerInt  = 1.0;
+  // Band light
+  S.fx.bandActive = p.bandActive ?? false;
+  S.fx.bandInt    = p.bandInt    ?? 5.0;
+  if (S.fx.bandActive) bandLight.color.setHex(p.bandColor ?? 0xff9944);
+  else                 bandLight.intensity = 0;
+  // Environment intensity — dim IBL so band stands out
+  scene.environmentIntensity = p.envIntensity ?? 1.0;
+}
+
+// Initial key light position
+keyLight.position.set(1.5, 5.0, 4.5);
+
+// ─── Background environments ─────────────────────────────────────────────
+function createHalftoneTexture() {
+  const size = 1024;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#eb84bb';
+  ctx.fillRect(0, 0, size, size);
+  const spacing = 22;
+  const maxR = spacing * 0.18;
+  ctx.fillStyle = '#ff7a00';
+  for (let row = 0; row * spacing < size + spacing; row++) {
+    const ox = (row % 2) * (spacing / 2);
+    for (let col = 0; col * spacing < size + spacing; col++) {
+      ctx.beginPath();
+      ctx.arc(col * spacing + ox, row * spacing, maxR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  return new THREE.CanvasTexture(c);
+}
+
+const ENVIRONMENTS = {
+  white: {
+    bg:    new THREE.Color(0xf7f7f9),
+    fog:   new THREE.Color(0xf7f7f9),
+    fogNear: 12, fogFar: 38,
+    floor: new THREE.Color(0xe2e2e6),
+    cardShadowOp:  0.48,
+    floorShadowOp: 0.55,
+  },
+  grey: {
+    bg:    new THREE.Color(0xa8a8a8),
+    fog:   new THREE.Color(0xa8a8a8),
+    fogNear: 12, fogFar: 38,
+    floor: new THREE.Color(0x888888),
+    cardShadowOp:  0.65,
+    floorShadowOp: 0.70,
+  },
+  dark: {
+    bg:    new THREE.Color(0x060606),
+    fog:   new THREE.Color(0x060606),
+    fogNear: 15, fogFar: 42,
+    floor: new THREE.Color(0x0d0d0d),
+    cardShadowOp:  0.80,
+    floorShadowOp: 0.88,
+  },
+  blue: {
+    bg:    new THREE.Color(0x3640e0),
+    fog:   new THREE.Color(0x3640e0),
+    fogNear: 12, fogFar: 38,
+    floor: new THREE.Color(0x2a32b8),
+    cardShadowOp:  0.70,
+    floorShadowOp: 0.75,
+  },
+  halftone: {
+    bg:    createHalftoneTexture(),
+    fog:   new THREE.Color(0xeb84bb),
+    fogNear: 12, fogFar: 38,
+    floor: new THREE.Color(0xd460a0),
+    cardShadowOp:  0.55,
+    floorShadowOp: 0.60,
+  },
+};
+
+function applyEnvironment(name) {
+  const e = ENVIRONMENTS[name];
+  if (!e) return;
+  scene.background = (e.bg instanceof THREE.Texture) ? e.bg : e.bg.clone();
+  scene.fog.color.copy(e.fog);
+  scene.fog.near   = e.fogNear;
+  scene.fog.far    = e.fogFar;
+  infiniteFloorMat.color.copy(e.floor);
+  cardShadowMat.opacity  = e.cardShadowOp;
+  floorShadowMat.opacity = e.floorShadowOp;
+}
+
+// ─── Finish presets ──────────────────────────────────────────────────────
+const FINISHES = {
+  matte:  { metalness: 0.00, roughness: 0.88, clearcoat: 0.00, iridescence: 0.00 },
+  glossy: { metalness: 0.05, roughness: 0.06, clearcoat: 1.00, iridescence: 0.10 },
+  metal:  { metalness: 0.50, roughness: 0.20, clearcoat: 0.80, iridescence: 0.35 },
+  gold:   { metalness: 0.92, roughness: 0.22, clearcoat: 0.55, iridescence: 0.15, baseColor: 0xC8A84C },
+  holo:   { metalness: 0.40, roughness: 0.06, clearcoat: 0.95, iridescence: 1.00, baseColor: 0xC8C8D8 },
+  chrome: { metalness: 1.00, roughness: 0.02, clearcoat: 1.00, iridescence: 0.50, baseColor: 0xDCDCE8 },
+};
+
+function updateMats() {
+  const all = [frontMat, backMat, sideMat, mainCard.fFaceMat, mainCard.bFaceMat];
+  multiCards.forEach(mc => all.push(mc.fFaceMat, mc.bFaceMat));
+  all.forEach(m => {
+    if (!m) return;
+    m.metalness   = S.metalness;
+    m.roughness   = S.roughness;
+    m.clearcoat   = S.clearcoat;
+    m.iridescence = S.iridescence;
+    m.needsUpdate = true;
+  });
+}
+
+function applyFinish(name) {
+  const f = FINISHES[name];
+  if (!f) return;
+  Object.assign(S, f);
+
+  const hasOverride = 'baseColor' in f;
+  const faceMats = [frontMat, backMat, mainCard.fFaceMat, mainCard.bFaceMat];
+  multiCards.forEach(mc => faceMats.push(mc.fFaceMat, mc.bFaceMat));
+
+  faceMats.forEach(m => {
+    if (!m) return;
+    if (hasOverride) {
+      if (m._baseMap === undefined) m._baseMap = m.map;
+      m.map = null;
+      m.color.setHex(f.baseColor);
+    } else {
+      if (m._baseMap !== undefined) { m.map = m._baseMap; delete m._baseMap; }
+      m.color.setHex(0xffffff);
+    }
+  });
+
+  if (hasOverride) {
+    sideMat.map = null;
+    sideMat.color.setHex(f.baseColor);
+  } else {
+    sideMat.map = sideTex;
+    sideMat.color.setHex(0xffffff);
+  }
+
+  updateMats();
+}
+
+// ─── UI: Light presets ───────────────────────────────────────────────────
+document.querySelectorAll('[data-light]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-light]').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    applyLightPreset(btn.dataset.light);
+  });
+});
+
+// ─── UI: Background environments ────────────────────────────────────────
+document.querySelectorAll('[data-env]').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('[data-env]').forEach(s => s.classList.remove('on'));
+    sw.classList.add('on');
+    applyEnvironment(sw.dataset.env);
+    document.body.classList.toggle('dark-ui', sw.dataset.env === 'dark');
+  });
+});
+
+// ─── UI: Finish presets ──────────────────────────────────────────────────
+document.querySelectorAll('[data-finish]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-finish]').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    applyFinish(btn.dataset.finish);
+  });
+});
+
+// ─── UI: Floor toggle ────────────────────────────────────────────────────
+let floorVisible = true;
+document.getElementById('floor-toggle').addEventListener('change', function() {
+  floorVisible = this.checked;
+  infiniteFloor.visible = floorVisible;
+  cardShadow.visible    = floorVisible && !multiMode;
+  floorShadow.visible   = floorVisible && !multiMode;
+});
+
+// ─── UI: Transparent toggle ──────────────────────────────────────────────
+document.getElementById('transp-toggle').addEventListener('change', function() {
+  S.fx.transparent = this.checked;
+});
+
+// ─── UI: File upload ─────────────────────────────────────────────────────
+function loadImg(file, cb) {
+  const img = new Image();
+  img.onload = () => cb(img);
+  img.src    = URL.createObjectURL(file);
+}
+
+document.getElementById('file-front').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  e.target.value = '';
+  loadImg(f, img => {
+    const newTex = makeFromImage(img);
+    mainCard.fFaceMat.map = newTex;
+    mainCard.fFaceMat.needsUpdate = true;
+    if (multiMode) {
+      multiCards.forEach(mc => { mc.fFaceMat.map = newTex; mc.fFaceMat.needsUpdate = true; });
+    }
+    document.getElementById('zone-front').classList.add('filled');
+    document.getElementById('front-name').textContent = f.name.replace(/\.[^.]+$/, '').slice(0, 12);
+  });
+});
+
+document.getElementById('file-back').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  e.target.value = '';
+  loadImg(f, img => {
+    const newTex = makeFromImage(img);
+    mainCard.bFaceMat.map = newTex;
+    mainCard.bFaceMat.needsUpdate = true;
+    if (multiMode) {
+      multiCards.forEach(mc => { mc.bFaceMat.map = newTex; mc.bFaceMat.needsUpdate = true; });
+    }
+    document.getElementById('zone-back').classList.add('filled');
+    document.getElementById('back-name').textContent = f.name.replace(/\.[^.]+$/, '').slice(0, 12);
+  });
+});
+
+// ─── Mode toggle: Camera orbit vs Card rotate ────────────────────────────
+let dragMode = 'card';
+controls.enabled = false;
+
+document.querySelectorAll('.mtbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    dragMode = btn.dataset.mode;
+    document.querySelectorAll('.mtbtn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    controls.enabled = (dragMode === 'camera');
+    canvas.style.cursor = dragMode === 'card' ? 'grab' : '';
+    document.getElementById('hint-text').textContent =
+      dragMode === 'camera'
+        ? 'drag to orbit  ·  scroll to zoom  ·  double-click to reset'
+        : 'drag to rotate  ·  scroll to zoom  ·  double-click to reset';
+  });
+});
+
+// ─── Card rotation drag ──────────────────────────────────────────────────
+let cardDrag = false, lastX = 0, lastY = 0;
+let cardRotY = 0, cardRotX = 0;
+
+canvas.style.cursor = 'grab';
+
+canvas.addEventListener('mousedown', e => {
+  if (dragMode !== 'card') return;
+  cardDrag = true;
+  lastX = e.clientX; lastY = e.clientY;
+  canvas.style.cursor = 'grabbing';
+  e.preventDefault();
+});
+window.addEventListener('mousemove', e => {
+  if (!cardDrag || dragMode !== 'card') return;
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  cardRotY += dx * 0.008;
+  cardRotX += dy * 0.006;
+  cardRotX = Math.max(-Math.PI * 0.45, Math.min(Math.PI * 0.45, cardRotX));
+  const rotTarget = multiMode ? multiGroup : card;
+  rotTarget.rotation.y = cardRotY;
+  rotTarget.rotation.x = cardRotX;
+});
+window.addEventListener('mouseup', () => {
+  if (!cardDrag) return;
+  cardDrag = false;
+  if (dragMode === 'card') canvas.style.cursor = 'grab';
+});
+
+// ─── Double-click reset ──────────────────────────────────────────────────
+canvas.addEventListener('dblclick', () => {
+  if (dragMode === 'camera') {
+    controls.reset();
+  } else {
+    cardRotY = 0; cardRotX = 0;
+    (multiMode ? multiGroup : card).rotation.set(0, 0, 0);
+  }
+});
+
+// ─── Export ──────────────────────────────────────────────────────────────
+document.getElementById('dl-btn').addEventListener('click', () => {
+  const mult = 4; // always 4K
+  const EW = wrap.clientWidth  * mult;
+  const EH = wrap.clientHeight * mult;
+
+  renderer.setSize(EW, EH, false);
+  renderer.setPixelRatio(1);
+  camera.aspect = EW / EH;
+  camera.updateProjectionMatrix();
+
+  const prevBg = scene.background;
+  if (S.fx.transparent) scene.background = null;
+
+  renderer.render(scene, camera);
+  const url = canvas.toDataURL('image/png');
+
+  scene.background = prevBg;
+  resize();
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'card-studio-4k.png';
+  a.click();
+});
+
+// ─── Resize ──────────────────────────────────────────────────────────────
+function resize() {
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  renderer.setSize(W, H, false);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+}
+resize();
+new ResizeObserver(resize).observe(wrap);
+window.addEventListener('resize', resize);
+
+// ─── Collapsible sections ────────────────────────────────────────────────
+document.querySelectorAll('.bs.collapsible .bs-header').forEach(header => {
+  header.addEventListener('click', () => {
+    header.closest('.bs').classList.toggle('collapsed');
+  });
+});
+
+// ─── Multi-card mode ─────────────────────────────────────────────────────
+let multiMode    = false;
+let multiLayout  = 'line';
+let multiCount   = 1;
+let multiRadius  = 3.0;
+let multiXOff    = 0.80;
+let multiYOff    = 0.00;
+let multiZOff    = 0.00;
+let multiRotX    = 0;
+let multiRotY    = 0;
+let multiRotZ    = 0;
+let multiZFactor = 1.0;
+const multiCards = [];
+const multiGroup  = new THREE.Group();
+scene.add(multiGroup);
+multiGroup.visible = false;
+
+function disposeMultiCards() {
+  multiCards.forEach(mc => {
+    mc.group.traverse(obj => { if (obj.geometry) obj.geometry.dispose(); });
+    multiGroup.remove(mc.group);
+  });
+  multiCards.length = 0;
+}
+
+// Returns array of {x,y,z,rx,ry,rz} for each card.
+// Each card gets a unique Z nudge (i * 0.004) to avoid any co-planar z-fighting.
+function computeMultiPositions() {
+  const n   = multiCount;
+  const mid = (n - 1) / 2;
+  const res = [];
+
+  if (multiLayout === 'ring') {
+    for (let i = 0; i < n; i++) {
+      const angle = (i / n) * Math.PI * 2;
+      const t = i - mid;
+      res.push({
+        x:  Math.sin(angle) * multiRadius,
+        y:  t * multiYOff,
+        z:  Math.cos(angle) * multiRadius,
+        rx: multiRotX * Math.PI / 180,
+        ry: angle + multiRotY * Math.PI / 180,
+        rz: multiRotZ * Math.PI / 180,
+      });
+    }
+  } else {
+    for (let i = 0; i < n; i++) {
+      const t    = i - mid;
+      const tSgn = t >= 0 ? 1 : -1;
+      const tPow = tSgn * Math.pow(Math.abs(t), multiZFactor);
+      res.push({
+        x:  t * multiXOff,
+        y:  t * multiYOff,
+        z:  tPow * multiZOff + i * 0.004,
+        rx: t * multiRotX * Math.PI / 180,
+        ry: t * multiRotY * Math.PI / 180,
+        rz: t * multiRotZ * Math.PI / 180,
+      });
+    }
+  }
+  return res;
+}
+
+function buildMultiCards() {
+  disposeMultiCards();
+  const positions   = computeMultiPositions();
+  const curFrontMap = mainCard.fFaceMat.map;
+  const curBackMap  = mainCard.bFaceMat.map;
+  for (let i = 0; i < multiCount; i++) {
+    const mc = buildCardGroup(frontMat, backMat, sideMat);
+    mc.fFaceMat.map         = curFrontMap;
+    mc.bFaceMat.map         = curBackMap;
+    mc.fFaceMat.metalness   = S.metalness;  mc.fFaceMat.roughness   = S.roughness;
+    mc.fFaceMat.clearcoat   = S.clearcoat;  mc.fFaceMat.iridescence = S.iridescence;
+    mc.bFaceMat.metalness   = S.metalness;  mc.bFaceMat.roughness   = S.roughness;
+    mc.bFaceMat.clearcoat   = S.clearcoat;  mc.bFaceMat.iridescence = S.iridescence;
+    mc.fFaceMat.needsUpdate = true;
+    mc.bFaceMat.needsUpdate = true;
+    const p = positions[i];
+    mc.group.position.set(p.x, p.y, p.z);
+    mc.group.rotation.set(p.rx, p.ry, p.rz);
+    multiGroup.add(mc.group);
+    multiCards.push(mc);
+  }
+}
+
+function setMultiMode(active) {
+  multiMode = active;
+  cardRotY = 0; cardRotX = 0;
+  card.visible        = !active;
+  multiGroup.visible  =  active;
+  cardShadow.visible  = !active;
+  floorShadow.visible = !active;
+  if (active) {
+    multiGroup.rotation.set(0, 0, 0);
+    buildMultiCards();
+  } else {
+    card.rotation.set(0, 0, 0);
+  }
+}
+
+// ── Count — keyboard editing
+const cntDisplay = document.getElementById('cnt-display');
+
+function applyCountInput() {
+  const val = parseInt(cntDisplay.textContent.trim(), 10);
+  const clamped = isNaN(val) ? multiCount : Math.min(60, Math.max(1, val));
+  const prev = multiCount;
+  multiCount = clamped;
+  cntDisplay.textContent = multiCount;
+  if (multiCount === 1 && prev !== 1)       setMultiMode(false);
+  else if (multiCount > 1 && prev === 1)    setMultiMode(true);
+  else if (multiMode && multiCount !== prev) buildMultiCards();
+}
+
+cntDisplay.addEventListener('keydown', e => {
+  if (e.key === 'Enter')  { e.preventDefault(); cntDisplay.blur(); }
+  if (e.key === 'Escape') { cntDisplay.textContent = multiCount; cntDisplay.blur(); }
+  // allow only digits and control keys
+  if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+    e.preventDefault();
+  }
+});
+cntDisplay.addEventListener('blur', applyCountInput);
+cntDisplay.addEventListener('focus', () => {
+  // select all on focus for easy replacement
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(cntDisplay);
+  sel.removeAllRanges();
+  sel.addRange(range);
+});
+
+// ── Count +/−
+document.getElementById('cnt-minus').addEventListener('click', () => {
+  if (multiCount <= 1) return;
+  multiCount--;
+  document.getElementById('cnt-display').textContent = multiCount;
+  if (multiCount === 1) {
+    setMultiMode(false);
+  } else if (multiMode) {
+    buildMultiCards();
+  }
+});
+document.getElementById('cnt-plus').addEventListener('click', () => {
+  if (multiCount >= 60) return;
+  const wasOne = multiCount === 1;
+  multiCount++;
+  document.getElementById('cnt-display').textContent = multiCount;
+  if (wasOne) {
+    setMultiMode(true);
+  } else if (multiMode) {
+    buildMultiCards();
+  }
+});
+
+// ── helpers: sync slider+number and rebuild
+function syncParam(varSetter, sliderId, numId, fmt) {
+  const slider = document.getElementById(sliderId);
+  const num    = document.getElementById(numId);
+  slider.addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    varSetter(v);
+    num.value = fmt(v);
+    if (multiMode) buildMultiCards();
+  });
+  num.addEventListener('input', e => {
+    let v = parseFloat(e.target.value);
+    if (isNaN(v)) return;
+    const lo = parseFloat(num.min), hi = parseFloat(num.max);
+    v = Math.min(hi, Math.max(lo, v));
+    varSetter(v);
+    slider.value = v;
+    if (multiMode) buildMultiCards();
+  });
+  // blur clamps and reformats
+  num.addEventListener('blur', e => {
+    let v = parseFloat(e.target.value);
+    if (isNaN(v)) v = parseFloat(slider.value);
+    const lo = parseFloat(num.min), hi = parseFloat(num.max);
+    v = Math.min(hi, Math.max(lo, v));
+    varSetter(v);
+    slider.value = v;
+    num.value = fmt(v);
+    if (multiMode) buildMultiCards();
+  });
+}
+
+syncParam(v => multiRadius  = v, 'multi-radius', 'radius-val', v => v.toFixed(1));
+syncParam(v => multiXOff    = v, 'multi-xoff',   'xoff-val',   v => v.toFixed(2));
+syncParam(v => multiYOff    = v, 'multi-yoff',   'yoff-val',   v => v.toFixed(2));
+syncParam(v => multiZOff    = v, 'multi-zoff',   'zoff-val',   v => v.toFixed(2));
+syncParam(v => multiRotX    = v, 'multi-rotx',   'rotx-val',   v => String(Math.round(v)));
+syncParam(v => multiRotY    = v, 'multi-roty',   'roty-val',   v => String(Math.round(v)));
+syncParam(v => multiRotZ    = v, 'multi-rotz',   'rotz-val',   v => String(Math.round(v)));
+syncParam(v => multiZFactor = v, 'multi-zfac',   'zfac-val',   v => v.toFixed(1));
+
+// ── Layout toggle (Line / Ring)
+function setLayout(mode) {
+  multiLayout = mode;
+  document.getElementById('lt-line').classList.toggle('on', mode === 'line');
+  document.getElementById('lt-ring').classList.toggle('on', mode === 'ring');
+  const isRing = mode === 'ring';
+  document.getElementById('row-radius').style.display = isRing ? '' : 'none';
+  document.getElementById('row-xoff').style.display   = isRing ? 'none' : '';
+  document.getElementById('row-zoff').style.display   = isRing ? 'none' : '';
+  document.getElementById('row-zfac').style.display   = isRing ? 'none' : '';
+  if (multiMode) buildMultiCards();
+}
+document.getElementById('lt-line').addEventListener('click', () => setLayout('line'));
+document.getElementById('lt-ring').addEventListener('click', () => setLayout('ring'));
+
+// ── Reset multi controls
+const MULTI_DEFAULTS = { radius:3.0, xoff:0.80, yoff:0.00, zoff:0.00, rotx:0, roty:0, rotz:0, zfac:1.0 };
+document.getElementById('multi-reset').addEventListener('click', () => {
+  multiRadius = MULTI_DEFAULTS.radius;
+  multiXOff = MULTI_DEFAULTS.xoff;  multiYOff = MULTI_DEFAULTS.yoff;
+  multiZOff = MULTI_DEFAULTS.zoff;  multiRotX = MULTI_DEFAULTS.rotx;
+  multiRotY = MULTI_DEFAULTS.roty;  multiRotZ = MULTI_DEFAULTS.rotz;
+  multiZFactor = MULTI_DEFAULTS.zfac;
+
+  document.getElementById('multi-radius').value = multiRadius;
+  document.getElementById('multi-xoff').value   = multiXOff;
+  document.getElementById('multi-yoff').value   = multiYOff;
+  document.getElementById('multi-zoff').value   = multiZOff;
+  document.getElementById('multi-rotx').value   = multiRotX;
+  document.getElementById('multi-roty').value   = multiRotY;
+  document.getElementById('multi-rotz').value   = multiRotZ;
+  document.getElementById('multi-zfac').value   = multiZFactor;
+
+  document.getElementById('radius-val').value = multiRadius.toFixed(1);
+  document.getElementById('xoff-val').value   = multiXOff.toFixed(2);
+  document.getElementById('yoff-val').value   = multiYOff.toFixed(2);
+  document.getElementById('zoff-val').value   = multiZOff.toFixed(2);
+  document.getElementById('rotx-val').value   = multiRotX;
+  document.getElementById('roty-val').value   = multiRotY;
+  document.getElementById('rotz-val').value   = multiRotZ;
+  document.getElementById('zfac-val').value   = multiZFactor.toFixed(1);
+
+  if (multiMode) buildMultiCards();
+});
+
+// ─── Render loop ─────────────────────────────────────────────────────────
+let clock = 0;
+(function loop() {
+  requestAnimationFrame(loop);
+  clock += 0.016;
+
+  controls.update();
+
+  // ── Smooth light transitions
+  const lf = 0.055;
+  keyLight.intensity    += (lightLerp.keyInt    - keyLight.intensity)    * lf;
+  fillLight.intensity   += (lightLerp.fillInt   - fillLight.intensity)   * lf;
+  rimLight.intensity    += (lightLerp.rimInt     - rimLight.intensity)    * lf;
+  ambientLight.intensity += (lightLerp.ambientInt - ambientLight.intensity) * lf;
+  renderer.toneMappingExposure += (lightLerp.exposure - renderer.toneMappingExposure) * lf;
+  keyLight.position.lerp(lightLerp.keyPos, lf);
+  fillLight.color.lerp(lightLerp.fillColor, lf);
+  keyLight.color.lerp(lightLerp.keyColor, lf);
+
+  // ── Multi group subtle float
+  if (multiMode) {
+    multiGroup.position.y = Math.sin(clock * 0.55) * 0.022;
+  }
+
+  // ── Float animation
+  if (S.fx.float && !multiMode) {
+    const yo = Math.sin(clock * 0.78) * 0.060;
+    card.position.y = yo;
+    if (S.fx.shadow) {
+      const lift = (yo + 0.060) / 0.12;
+      const sp   = 1.0 + lift * 0.40;
+      cardShadow.scale.x      = sp;
+      cardShadowMat.opacity   = ENVIRONMENTS[
+        document.querySelector('[data-env].on')?.dataset.env || 'white'
+      ].cardShadowOp * (1 - lift * 0.28);
+    }
+  }
+
+  // ── Shadow tracks card rotation
+  if (S.fx.shadow) {
+    const cosT = Math.max(0.20, Math.abs(Math.cos(card.rotation.x)));
+    cardShadow.scale.z    = cardShadow.scale.x * cosT;
+    cardShadow.rotation.x = -Math.PI / 2;
+    cardShadow.rotation.z = -card.rotation.y;
+  }
+
+  // ── Shimmer sweep
+  if (S.fx.shimmer) {
+    const a = clock * 0.42;
+    shimmer.position.set(Math.sin(a) * 3.2, 2.6, Math.cos(a * 0.65) * 2.2 + 0.8);
+    shimmer.intensity = 0.75 + Math.sin(clock * 1.3) * 0.35;
+  } else {
+    shimmer.intensity = 0;
+  }
+
+  // ── Band light — focused strip sweeping across card face
+  if (S.fx.bandActive) {
+    const a = clock * 0.20;
+    bandLight.position.set(Math.sin(a) * 0.9, 1.2, 5.0);
+    bandLight.intensity = S.fx.bandInt * (0.88 + Math.sin(clock * 0.6) * 0.12);
+  } else {
+    bandLight.intensity = 0;
+  }
+
+  renderer.render(scene, camera);
+})();
+</script>
+</body>
+</html>

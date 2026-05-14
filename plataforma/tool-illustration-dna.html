@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tropicOS — Illustration DNA</title>
+<style>
+
+@font-face { font-family:'PPFragment'; src:url('./fonts/PPFragment-SerifLight.woff') format('woff'); font-weight:300; font-display:swap; }
+@font-face { font-family:'PPFragment'; src:url('./fonts/PPFragment-SerifRegular.otf') format('opentype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Ekstra'; src:url('./fonts/Ekstra-Regular.otf') format('opentype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Ekstra'; src:url('./fonts/Ekstra-Medium.otf') format('opentype'); font-weight:500; font-display:swap; }
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg-canvas:      #f0f0f0;
+  --bg-surface:     #ffffff;
+  --bg-hover:       #f7f7f7;
+  --bg-active:      #fafffd;
+  --border-subtle:  #e8e8e8;
+  --border-default: #d9d9d9;
+  --border-accent:  rgba(50,238,102,0.3);
+  --text-primary:   #111111;
+  --text-secondary: #555555;
+  --text-tertiary:  #999999;
+  --accent:         #32EE66;
+  --accent-glow:    rgba(50,238,102,0.15);
+  --font-e: 'PPFragment', Georgia, serif;
+  --font-u: 'Ekstra', system-ui, sans-serif;
+  --topbar-h:   52px;
+  --sidebar-w:  228px;
+  --sidebar-sm: 52px;
+  --sh-sm: 0 1px 4px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --sh-md: 0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --sh-lg: 0 8px 24px rgba(0,0,0,.10),0 4px 8px rgba(0,0,0,.05);
+  --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px;
+  --ease:cubic-bezier(0.2,0,0,1);
+  --fast:140ms; --normal:220ms; --slow:360ms;
+}
+@media(prefers-reduced-motion:reduce){:root{--fast:0ms;--normal:0ms;--slow:0ms}}
+
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-u);font-size:14px;background:var(--bg-canvas);color:var(--text-primary);-webkit-font-smoothing:antialiased}
+:focus-visible{outline:none;box-shadow:0 0 0 2px white,0 0 0 4px var(--accent)}
+
+/* SHELL */
+.app{display:grid;grid-template-rows:var(--topbar-h) 1fr;grid-template-columns:var(--sidebar-w) 1fr;grid-template-areas:"tb tb" "sb main";height:100vh;transition:grid-template-columns var(--normal) var(--ease)}
+.app.col{grid-template-columns:var(--sidebar-sm) 1fr}
+
+/* TOPBAR */
+.tb{grid-area:tb;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;padding:0 20px 0 0;z-index:200}
+.tb-logo{width:var(--sidebar-w);flex-shrink:0;display:flex;align-items:center;padding:0 20px;border-right:1px solid var(--border-subtle);height:100%;transition:width var(--normal) var(--ease)}
+.app.col .tb-logo{width:var(--sidebar-sm);padding:0;justify-content:center}
+.tb-logo img{transition:opacity var(--fast),max-width var(--normal)}
+.app.col .tb-logo img{opacity:0;max-width:0;pointer-events:none}
+.tb-ctx{flex:1;display:flex;align-items:center;padding:0 20px;gap:8px;min-width:0}
+.bc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-tertiary)}
+.bc a{color:var(--text-tertiary);text-decoration:none;transition:color var(--fast)}
+.bc a:hover{color:var(--text-primary)}
+.bc-sep{color:var(--border-default)}
+.bc-cur{color:var(--text-primary);font-weight:500}
+.tb-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:var(--r-md);font-size:11px;color:var(--text-secondary);margin-left:8px}
+.tb-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.tb-right{display:flex;align-items:center;gap:8px;padding-left:16px;margin-left:auto}
+.ib{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:var(--r-md);cursor:pointer;color:var(--text-tertiary);transition:background var(--fast),color var(--fast)}
+.ib:hover{background:var(--bg-canvas);color:var(--text-primary)}
+.av{width:28px;height:28px;background:var(--text-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:white;cursor:pointer}
+
+/* SIDEBAR */
+.sb{grid-area:sb;background:var(--bg-surface);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;overflow:visible;position:relative}
+.sb-toggle{position:absolute;top:16px;right:-12px;width:24px;height:24px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-tertiary);box-shadow:var(--sh-sm);z-index:10;transition:background var(--fast)}
+.sb-toggle:hover{background:var(--bg-canvas);color:var(--text-primary)}
+.sb-toggle svg{transition:transform var(--normal) var(--ease)}
+.app.col .sb-toggle svg{transform:rotate(180deg)}
+.sb-body{flex:1;overflow-y:auto;padding:16px 0}
+.sb-section{margin-bottom:20px}
+.sb-label{padding:0 16px 6px;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-tertiary)}
+.app.col .sb-label{display:none}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;font-size:13px;color:var(--text-secondary);cursor:pointer;transition:background var(--fast),color var(--fast);text-decoration:none;white-space:nowrap;overflow:hidden}
+.nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+.nav-item.active{background:var(--bg-active);color:var(--text-primary);font-weight:500}
+.nav-item.active .ni{color:var(--accent)}
+.ni{width:16px;height:16px;flex-shrink:0;color:var(--text-tertiary);display:flex;align-items:center;justify-content:center}
+.app.col .nav-item{justify-content:center;padding:8px 0}
+.app.col .nav-item span:not(.ni){display:none}
+.sb-footer{padding:12px 16px;border-top:1px solid var(--border-subtle)}
+.app.col .sb-footer{padding:12px 0}
+
+/* MAIN — canvas/split */
+.main{grid-area:main;display:flex;overflow:hidden}
+
+/* CANVAS (center) */
+.canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg-canvas)}
+.canvas-toolbar{display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.canvas-toolbar-group{display:flex;align-items:center;gap:4px}
+.canvas-toolbar-sep{width:1px;height:20px;background:var(--border-subtle);margin:0 4px}
+.tool-btn{height:28px;padding:0 10px;display:flex;align-items:center;gap:6px;background:none;border:1px solid transparent;border-radius:var(--r-md);font-family:var(--font-u);font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all var(--fast);white-space:nowrap}
+.tool-btn:hover{background:var(--bg-hover);color:var(--text-primary);border-color:var(--border-subtle)}
+.tool-btn.active{background:var(--text-primary);color:white;border-color:var(--text-primary)}
+.tool-btn svg{flex-shrink:0}
+.zoom-display{font-size:12px;color:var(--text-tertiary);padding:0 8px;min-width:46px;text-align:center}
+
+/* CANVAS VIEWPORT */
+.canvas-viewport{flex:1;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center}
+
+/* DROP ZONE */
+.drop-zone{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;border:2px dashed var(--border-default);margin:32px;border-radius:var(--r-xl);transition:all var(--fast);cursor:pointer;position:relative;background:var(--bg-surface);max-width:640px;max-height:420px}
+.drop-zone.drag{border-color:var(--accent);background:var(--accent-glow)}
+.drop-zone.has-image{border-style:solid;border-color:var(--border-subtle)}
+.dz-icon{width:56px;height:56px;border:1px dashed var(--border-default);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--text-tertiary)}
+.dz-title{font-size:14px;font-weight:500;color:var(--text-secondary);text-align:center}
+.dz-sub{font-size:12px;color:var(--text-tertiary);text-align:center;max-width:280px;line-height:1.5}
+.dz-btn{padding:8px 20px;background:var(--text-primary);color:white;border:none;border-radius:var(--r-md);font-family:var(--font-u);font-size:13px;font-weight:500;cursor:pointer;transition:opacity var(--fast)}
+.dz-btn:hover{opacity:.85}
+.dz-formats{display:flex;gap:6px;margin-top:4px}
+.dz-format{padding:3px 8px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:4px;font-size:10px;color:var(--text-tertiary)}
+
+/* IMAGE CANVAS */
+.img-canvas{display:none;width:100%;height:100%;position:relative;align-items:center;justify-content:center}
+.img-canvas.show{display:flex}
+.canvas-img{max-width:100%;max-height:100%;object-fit:contain;border-radius:var(--r-lg);box-shadow:var(--sh-lg)}
+.canvas-annotations{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}
+.annotation{position:absolute;display:flex;align-items:flex-start;gap:6px;animation:fadeUp var(--normal) var(--ease) both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.ann-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid white;box-shadow:0 0 0 2px rgba(50,238,102,.3);flex-shrink:0;margin-top:2px;cursor:pointer}
+.ann-label{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--r-md);padding:6px 10px;font-size:11px;color:var(--text-secondary);box-shadow:var(--sh-sm);max-width:160px;line-height:1.4;pointer-events:all}
+.ann-label strong{display:block;color:var(--text-primary);margin-bottom:2px;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+
+/* SAMPLE IMAGE MOSAIC (placeholder) */
+.sample-mosaic{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;width:560px;height:360px;border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-lg)}
+.mosaic-cell{background:var(--bg-canvas);position:relative;overflow:hidden}
+.mosaic-cell:nth-child(1){background:#1a1a2e;grid-row:span 2}
+.mosaic-cell:nth-child(2){background:#16213e}
+.mosaic-cell:nth-child(3){background:#0f3460}
+.mosaic-cell:nth-child(4){background:#533483}
+.mosaic-cell:nth-child(5){background:#2d6a4f}
+.mosaic-shape{position:absolute;border-radius:50%;opacity:.4}
+
+/* CANVAS BOTTOM BAR */
+.canvas-bottom{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--bg-surface);border-top:1px solid var(--border-subtle);flex-shrink:0}
+.gen-input-wrap{flex:1;display:flex;align-items:center;gap:8px;background:var(--bg-canvas);border:1px solid var(--border-default);border-radius:var(--r-xl);padding:8px 14px;transition:border-color var(--fast),box-shadow var(--fast)}
+.gen-input-wrap:focus-within{border-color:rgba(50,238,102,.4);box-shadow:0 0 0 3px rgba(50,238,102,.08)}
+.gen-input{flex:1;background:none;border:none;font-family:var(--font-u);font-size:13px;color:var(--text-primary);outline:none}
+.gen-input::placeholder{color:var(--text-tertiary)}
+.gen-btn{height:34px;padding:0 16px;background:var(--text-primary);color:white;border:none;border-radius:var(--r-md);font-family:var(--font-u);font-size:12px;font-weight:500;cursor:pointer;transition:opacity var(--fast),transform var(--fast);white-space:nowrap;flex-shrink:0}
+.gen-btn:hover{opacity:.85}
+.gen-btn:active{transform:scale(.97)}
+.gen-btn.loading{opacity:.6;pointer-events:none}
+
+/* SIDE PANEL (right) */
+.side-panel{width:320px;flex-shrink:0;border-left:1px solid var(--border-subtle);background:var(--bg-surface);display:flex;flex-direction:column;overflow:hidden}
+.sp-tabs{display:flex;border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.sp-tab{flex:1;padding:12px 8px;font-size:12px;color:var(--text-tertiary);cursor:pointer;text-align:center;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--fast)}
+.sp-tab:hover{color:var(--text-primary)}
+.sp-tab.active{color:var(--text-primary);font-weight:500;border-bottom-color:var(--text-primary)}
+.sp-body{flex:1;overflow-y:auto}
+.sp-section{padding:16px;border-bottom:1px solid var(--border-subtle)}
+.sp-section:last-child{border-bottom:none}
+.sp-section-title{font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:12px}
+
+/* DNA TAGS */
+.dna-tags{display:flex;flex-wrap:wrap;gap:6px}
+.dna-tag{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:20px;font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all var(--fast)}
+.dna-tag:hover{border-color:var(--border-accent);color:var(--text-primary)}
+.dna-tag.on{border-color:var(--accent);background:var(--accent-glow);color:var(--text-primary);font-weight:500}
+.dna-tag-dot{width:5px;height:5px;border-radius:50%;background:var(--text-tertiary)}
+.dna-tag.on .dna-tag-dot{background:var(--accent)}
+
+/* STYLE KNOBS */
+.style-knob{margin-bottom:14px}
+.sk-header{display:flex;justify-content:space-between;margin-bottom:6px}
+.sk-label{font-size:12px;color:var(--text-secondary)}
+.sk-value{font-size:12px;color:var(--text-tertiary)}
+.sk-track{height:3px;background:var(--border-default);border-radius:2px;cursor:pointer;position:relative}
+.sk-fill{height:100%;background:var(--text-primary);border-radius:2px;transition:width var(--fast)}
+.sk-thumb{width:12px;height:12px;border-radius:50%;background:var(--bg-surface);border:2px solid var(--text-primary);position:absolute;top:50%;transform:translate(-50%,-50%);cursor:grab;transition:box-shadow var(--fast)}
+.sk-thumb:hover{box-shadow:0 0 0 3px rgba(50,238,102,.2)}
+
+/* COLOR PALETTE */
+.palette-row{display:flex;gap:6px;flex-wrap:wrap}
+.pal-swatch{width:28px;height:28px;border-radius:var(--r-sm);cursor:pointer;border:1px solid rgba(0,0,0,.08);transition:transform var(--fast),box-shadow var(--fast)}
+.pal-swatch:hover{transform:scale(1.1)}
+.pal-swatch.sel{box-shadow:0 0 0 2px white,0 0 0 4px var(--text-primary)}
+.pal-add{width:28px;height:28px;border-radius:var(--r-sm);border:1px dashed var(--border-default);display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);cursor:pointer;font-size:16px;transition:all var(--fast)}
+.pal-add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* REFERENCE GRID */
+.ref-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ref-thumb{aspect-ratio:4/3;border-radius:var(--r-md);overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all var(--fast);position:relative}
+.ref-thumb:hover{border-color:var(--border-accent)}
+.ref-thumb.sel{border-color:var(--accent)}
+.ref-thumb-bg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px}
+.ref-add{aspect-ratio:4/3;border-radius:var(--r-md);border:1px dashed var(--border-default);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all var(--fast);color:var(--text-tertiary);font-size:11px}
+.ref-add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* OUTPUTS PANEL */
+.output-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px}
+.out-thumb{aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all var(--fast);position:relative;background:var(--bg-canvas)}
+.out-thumb:hover{border-color:var(--border-accent)}
+.out-thumb.sel{border-color:var(--accent)}
+.out-thumb-bg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px}
+.out-thumb-label{position:absolute;bottom:0;left:0;right:0;padding:4px 8px;background:linear-gradient(transparent,rgba(0,0,0,.5));color:white;font-size:10px}
+.out-loading-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px}
+.out-skel{aspect-ratio:1;border-radius:var(--r-md);background:linear-gradient(90deg,var(--border-subtle) 25%,var(--border-default) 50%,var(--border-subtle) 75%);background-size:200% 100%;animation:shimmer 1.4s ease infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* GENERATION COUNTER */
+.gen-count{font-size:11px;color:var(--text-tertiary);flex-shrink:0}
+.gen-seed{display:flex;align-items:center;gap:6px}
+.seed-label{font-size:11px;color:var(--text-tertiary)}
+.seed-val{font-size:11px;color:var(--text-secondary);font-weight:500;cursor:pointer;padding:2px 6px;background:var(--bg-canvas);border-radius:var(--r-sm)}
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- TOPBAR -->
+  <header class="tb">
+    <div class="tb-logo">
+      <a href="./library.html" style="display:flex;align-items:center;line-height:0"><img src="./assets/logo-wordmark-gradient.svg" alt="tropicOS" height="22"></a>
+    </div>
+    <div class="tb-ctx">
+      <nav class="bc">
+        <a href="./library.html">Library</a>
+        <span class="bc-sep">·</span>
+        <a href="./workflow.html">Campaign OS</a>
+        <span class="bc-sep">·</span>
+        <span class="bc-cur">Illustration DNA</span>
+      </nav>
+      <div class="tb-badge">
+        <span class="tb-badge-dot"></span>
+        Criativo · Imagen 3
+      </div>
+    </div>
+    <div class="tb-right">
+      <button class="ib" title="Notificações">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a4.5 4.5 0 0 0-4.5 4.5v2L2 10v.5h12V10l-1.5-1.5v-2A4.5 4.5 0 0 0 8 2ZM6.5 12a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="ib" title="Config">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M12.6 3.4l-.85.85M4.25 11.75l-.85.85" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="av">FS</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sb">
+    <button class="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+        <div class="sb-body">
+      <div class="sb-section">
+        <a class="nav-item" href="./library.html?filter=strategy">
+          <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l3-3 2.5 2.5 4-5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span>Strategy</span>
+        </a>
+        <a class="nav-item" href="./library.html?filter=creative">
+          <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11C4 9 4 7 7 6.5s2.5-2.5 4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M2 2.5C4 4.5 4 6.5 7 7s2.5 2.5 4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+          <span>Creative</span>
+        </a>
+        <a class="nav-item" href="./library.html?filter=content">
+          <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10.5l1-2.5L9 2l2 2-6 6.5-3 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7.5 3.5l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+          <span>Content</span>
+        </a>
+      </div>
+      <div class="sb-section" style="border-top:1px solid var(--border-subtle);padding-top:8px;margin-top:4px">
+        <a class="nav-item" href="#">
+          <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 3A1.5 1.5 0 014 1.5h3.5a1 1 0 01.7.3l3 3a1 1 0 01.3.7V11A1.5 1.5 0 0110 12.5H4A1.5 1.5 0 012.5 11V3z" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.5v3a.5.5 0 00.5.5H11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+          <span>My Files</span>
+        </a>
+      </div>
+    </div>
+    <div class="sb-footer">
+      <a class="nav-item" href="#">
+        <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3.5l2 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+        <span>Configuração</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- CANVAS AREA -->
+    <div class="canvas-area">
+      <!-- TOOLBAR -->
+      <div class="canvas-toolbar">
+        <div class="canvas-toolbar-group">
+          <button class="tool-btn active" id="mode-select" onclick="setMode('select',this)">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l4 9 1.5-3.5L11 6 2 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Selecionar
+          </button>
+          <button class="tool-btn" onclick="setMode('annotate',this)">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2"/></svg>
+            Anotar
+          </button>
+          <button class="tool-btn" onclick="setMode('crop',this)">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 1v8h8M1 3h8v8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Recortar
+          </button>
+        </div>
+        <div class="canvas-toolbar-sep"></div>
+        <div class="canvas-toolbar-group">
+          <button class="tool-btn" onclick="zoomOut()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M3.5 5.5h4M9.5 9.5l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </button>
+          <span class="zoom-display" id="zoom-val">100%</span>
+          <button class="tool-btn" onclick="zoomIn()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 3.5v4M3.5 5.5h4M9.5 9.5l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="canvas-toolbar-sep"></div>
+        <button class="tool-btn" onclick="showAnnotations()" id="ann-btn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7.5L11 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Analisar DNA
+        </button>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="tool-btn" onclick="clearCanvas()">Limpar</button>
+          <button class="tool-btn" onclick="uploadReference()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3.5 4L6 1l2.5 3M2 9.5h8v1.5H2z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Carregar referência
+          </button>
+        </div>
+      </div>
+
+      <!-- CANVAS VIEWPORT -->
+      <div class="canvas-viewport" id="canvas-vp"
+           ondragover="event.preventDefault();document.getElementById('drop-zone').classList.add('drag')"
+           ondragleave="document.getElementById('drop-zone').classList.remove('drag')"
+           ondrop="handleDrop(event)">
+
+        <!-- DROP ZONE -->
+        <div class="drop-zone" id="drop-zone" onclick="uploadReference()">
+          <div class="dz-icon">⊕</div>
+          <div class="dz-title">Arraste uma imagem de referência</div>
+          <div class="dz-sub">Carregue uma ilustração, mood board ou referência visual para extrair o DNA de estilo</div>
+          <button class="dz-btn" onclick="event.stopPropagation();loadSampleImage()">Carregar exemplo</button>
+          <div class="dz-formats">
+            <span class="dz-format">PNG</span>
+            <span class="dz-format">JPG</span>
+            <span class="dz-format">SVG</span>
+            <span class="dz-format">PDF</span>
+          </div>
+        </div>
+
+        <!-- IMAGE CANVAS (shown after upload) -->
+        <div class="img-canvas" id="img-canvas">
+          <div class="sample-mosaic" id="sample-mosaic">
+            <div class="mosaic-cell" id="mc1">
+              <div class="mosaic-shape" style="width:120px;height:120px;background:#6c63ff;top:-20px;left:-20px"></div>
+              <div class="mosaic-shape" style="width:60px;height:60px;background:#ff6584;bottom:20px;right:20px"></div>
+            </div>
+            <div class="mosaic-cell" id="mc2">
+              <div class="mosaic-shape" style="width:80px;height:80px;background:#3f51b5;top:10px;right:-10px"></div>
+            </div>
+            <div class="mosaic-cell" id="mc3">
+              <div class="mosaic-shape" style="width:100px;height:100px;background:#e91e63;bottom:-20px;left:10px;border-radius:30%"></div>
+            </div>
+            <div class="mosaic-cell" id="mc4">
+              <div class="mosaic-shape" style="width:70px;height:70px;background:#9c27b0;top:10px;left:10px;border-radius:20%"></div>
+            </div>
+            <div class="mosaic-cell" id="mc5">
+              <div class="mosaic-shape" style="width:90px;height:90px;background:#00bcd4;top:-15px;right:-15px"></div>
+            </div>
+          </div>
+
+          <!-- ANNOTATIONS -->
+          <div class="canvas-annotations" id="annotations" style="display:none">
+            <div class="annotation" style="top:18%;left:8%;animation-delay:.1s">
+              <div class="ann-dot"></div>
+              <div class="ann-label"><strong>Paleta</strong>Tons frios + acento vibrante. Contraste elevado.</div>
+            </div>
+            <div class="annotation" style="top:55%;left:32%;animation-delay:.2s">
+              <div class="ann-dot"></div>
+              <div class="ann-label"><strong>Formas</strong>Geométrico orgânico. Círculos distorcidos.</div>
+            </div>
+            <div class="annotation" style="top:22%;left:58%;animation-delay:.3s">
+              <div class="ann-dot"></div>
+              <div class="ann-label"><strong>Composição</strong>Grade assimétrica. Tensão visual deliberada.</div>
+            </div>
+            <div class="annotation" style="top:72%;left:68%;animation-delay:.4s">
+              <div class="ann-dot"></div>
+              <div class="ann-label"><strong>Estilo</strong>Flat com profundidade sutil. Sem gradientes complexos.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM PROMPT BAR -->
+      <div class="canvas-bottom">
+        <div class="gen-input-wrap">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;color:var(--text-tertiary)"><path d="M7 1l1.5 4H13l-3.7 2.7 1.4 4.3L7 9.3l-3.7 2.7 1.4-4.3L1 5h4.5L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          <input type="text" class="gen-input" placeholder="Descreva o que gerar… Ex: Poster urbano, estilo anos 90, alta saturação" id="gen-prompt">
+        </div>
+        <button class="gen-btn" onclick="generateVariants()" id="gen-main-btn">Gerar variações</button>
+        <div class="gen-seed">
+          <span class="seed-label">Seed</span>
+          <span class="seed-val" id="seed-val" onclick="randomizeSeed()" title="Clique para aleatorizar">4821</span>
+        </div>
+        <span class="gen-count" id="gen-count">0 / 16 gerações</span>
+      </div>
+    </div>
+
+    <!-- SIDE PANEL -->
+    <div class="side-panel">
+      <div class="sp-tabs">
+        <div class="sp-tab active" onclick="switchSpTab(this,'style')">Estilo</div>
+        <div class="sp-tab" onclick="switchSpTab(this,'refs')">Referências</div>
+        <div class="sp-tab" onclick="switchSpTab(this,'output')">Saídas</div>
+      </div>
+
+      <!-- STYLE TAB -->
+      <div class="sp-body" id="tab-style">
+        <div class="sp-section">
+          <div class="sp-section-title">DNA Visual detectado</div>
+          <div class="dna-tags" id="dna-tags">
+            <div class="dna-tag on" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Geométrico</div>
+            <div class="dna-tag on" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Alto contraste</div>
+            <div class="dna-tag on" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Flat design</div>
+            <div class="dna-tag" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Gradientes</div>
+            <div class="dna-tag on" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Tipografia bold</div>
+            <div class="dna-tag" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Fotorrealismo</div>
+            <div class="dna-tag on" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Urban</div>
+            <div class="dna-tag" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Minimalismo</div>
+            <div class="dna-tag on" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Cores vibrantes</div>
+          </div>
+        </div>
+
+        <div class="sp-section">
+          <div class="sp-section-title">Parâmetros de estilo</div>
+
+          <div class="style-knob">
+            <div class="sk-header">
+              <span class="sk-label">Abstração</span>
+              <span class="sk-value" id="sk-abst-val">65%</span>
+            </div>
+            <div class="sk-track" onclick="setKnob(this,'sk-abst-val',event)">
+              <div class="sk-fill" id="sk-abst" style="width:65%"></div>
+              <div class="sk-thumb" style="left:65%"></div>
+            </div>
+          </div>
+
+          <div class="style-knob">
+            <div class="sk-header">
+              <span class="sk-label">Saturação</span>
+              <span class="sk-value" id="sk-sat-val">80%</span>
+            </div>
+            <div class="sk-track" onclick="setKnob(this,'sk-sat-val',event)">
+              <div class="sk-fill" id="sk-sat" style="width:80%"></div>
+              <div class="sk-thumb" style="left:80%"></div>
+            </div>
+          </div>
+
+          <div class="style-knob">
+            <div class="sk-header">
+              <span class="sk-label">Complexidade</span>
+              <span class="sk-value" id="sk-comp-val">40%</span>
+            </div>
+            <div class="sk-track" onclick="setKnob(this,'sk-comp-val',event)">
+              <div class="sk-fill" id="sk-comp" style="width:40%"></div>
+              <div class="sk-thumb" style="left:40%"></div>
+            </div>
+          </div>
+
+          <div class="style-knob">
+            <div class="sk-header">
+              <span class="sk-label">Fidelidade ao DNA</span>
+              <span class="sk-value" id="sk-fid-val">75%</span>
+            </div>
+            <div class="sk-track" onclick="setKnob(this,'sk-fid-val',event)">
+              <div class="sk-fill" id="sk-fid" style="width:75%"></div>
+              <div class="sk-thumb" style="left:75%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sp-section">
+          <div class="sp-section-title">Paleta base</div>
+          <div class="palette-row" id="palette-row">
+            <div class="pal-swatch sel" style="background:#1a1a2e" onclick="selectSwatch(this)" title="#1a1a2e"></div>
+            <div class="pal-swatch" style="background:#6c63ff" onclick="selectSwatch(this)" title="#6c63ff"></div>
+            <div class="pal-swatch" style="background:#ff6584" onclick="selectSwatch(this)" title="#ff6584"></div>
+            <div class="pal-swatch" style="background:#3f51b5" onclick="selectSwatch(this)" title="#3f51b5"></div>
+            <div class="pal-swatch" style="background:#00bcd4" onclick="selectSwatch(this)" title="#00bcd4"></div>
+            <div class="pal-swatch" style="background:#f0f0f0" onclick="selectSwatch(this)" title="#f0f0f0"></div>
+            <div class="pal-add" title="Adicionar cor">+</div>
+          </div>
+        </div>
+
+        <div class="sp-section">
+          <div class="sp-section-title">Aspecto de saída</div>
+          <div class="dna-tags">
+            <div class="dna-tag on" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>1:1 Square</div>
+            <div class="dna-tag" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>4:5 Portrait</div>
+            <div class="dna-tag" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>16:9 Wide</div>
+            <div class="dna-tag" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>9:16 Story</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REFS TAB -->
+      <div class="sp-body" id="tab-refs" style="display:none">
+        <div class="sp-section">
+          <div class="sp-section-title">Imagens de referência</div>
+          <div class="ref-grid">
+            <div class="ref-thumb sel" onclick="toggleRef(this)">
+              <div class="ref-thumb-bg" style="background:#1a1a2e">🎨</div>
+            </div>
+            <div class="ref-thumb" onclick="toggleRef(this)">
+              <div class="ref-thumb-bg" style="background:#16213e">🖼</div>
+            </div>
+            <div class="ref-thumb" onclick="toggleRef(this)">
+              <div class="ref-thumb-bg" style="background:#0f3460">🌆</div>
+            </div>
+            <div class="ref-add" onclick="uploadReference()">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <span>Adicionar</span>
+            </div>
+          </div>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">DNA de campanhas anteriores</div>
+          <div class="dna-tags">
+            <div class="dna-tag" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Nike SS25</div>
+            <div class="dna-tag on" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Havaianas 24</div>
+            <div class="dna-tag" onclick="toggleTag(this)"><span class="dna-tag-dot"></span>Itaú Verão</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OUTPUT TAB -->
+      <div class="sp-body" id="tab-output" style="display:none">
+        <div class="out-loading-grid" id="out-loading-grid" style="display:none">
+          <div class="out-skel"></div>
+          <div class="out-skel"></div>
+          <div class="out-skel"></div>
+          <div class="out-skel"></div>
+        </div>
+        <div class="output-grid" id="output-grid">
+          <div style="grid-column:span 2;padding:40px 20px;text-align:center;color:var(--text-tertiary);font-size:12px;line-height:1.6">
+            Configure o estilo e gere variações para ver os resultados aqui
+          </div>
+        </div>
+        <div class="sp-section" style="padding-top:8px">
+          <div class="sp-section-title">Ações</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <button class="tool-btn" style="justify-content:flex-start;width:100%;height:32px;padding:0 12px" onclick="exportAll()">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 8v2h8V8M6 1v6M3.5 4.5L6 7l2.5-2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Exportar selecionados
+            </button>
+            <button class="tool-btn" style="justify-content:flex-start;width:100%;height:32px;padding:0 12px" onclick="sendToWorkflow()">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7 2l3 3-3 3M2 10V7a4 4 0 0 1 4-4h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Enviar para Campaign OS
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+let zoom = 100;
+let genCount = 0;
+
+function toggleSidebar(){
+  document.getElementById('app').classList.toggle('col');
+}
+
+function setMode(mode, el){
+  document.querySelectorAll('.canvas-toolbar .tool-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function zoomIn(){
+  zoom = Math.min(zoom+25,200);
+  document.getElementById('zoom-val').textContent = zoom+'%';
+  const mosaic = document.getElementById('sample-mosaic');
+  if(mosaic) mosaic.style.transform = `scale(${zoom/100})`;
+}
+
+function zoomOut(){
+  zoom = Math.max(zoom-25,50);
+  document.getElementById('zoom-val').textContent = zoom+'%';
+  const mosaic = document.getElementById('sample-mosaic');
+  if(mosaic) mosaic.style.transform = `scale(${zoom/100})`;
+}
+
+function loadSampleImage(){
+  document.getElementById('drop-zone').style.display='none';
+  document.getElementById('img-canvas').classList.add('show');
+
+  // activate output tab highlight
+  setTimeout(()=>{
+    showAnnotations();
+  }, 600);
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  loadSampleImage();
+}
+
+function uploadReference(){
+  loadSampleImage();
+}
+
+function clearCanvas(){
+  document.getElementById('drop-zone').style.display='';
+  document.getElementById('img-canvas').classList.remove('show');
+  document.getElementById('annotations').style.display='none';
+  document.getElementById('ann-btn').classList.remove('active');
+}
+
+function showAnnotations(){
+  const img = document.getElementById('img-canvas');
+  if(!img.classList.contains('show')) return;
+  const ann = document.getElementById('annotations');
+  const btn = document.getElementById('ann-btn');
+  if(ann.style.display==='none'){
+    ann.style.display='block';
+    btn.classList.add('active');
+  } else {
+    ann.style.display='none';
+    btn.classList.remove('active');
+  }
+}
+
+function toggleTag(el){
+  el.classList.toggle('on');
+  el.querySelector('.dna-tag-dot').style.background = el.classList.contains('on') ? 'var(--accent)' : 'var(--text-tertiary)';
+}
+
+function setKnob(track, valId, e){
+  const rect = track.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width * 100)));
+  const pctStr = Math.round(pct)+'%';
+  track.querySelector('.sk-fill').style.width = pctStr;
+  track.querySelector('.sk-thumb').style.left = pctStr;
+  document.getElementById(valId).textContent = pctStr;
+}
+
+function selectSwatch(el){
+  document.querySelectorAll('.pal-swatch').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function toggleRef(el){
+  el.classList.toggle('sel');
+}
+
+function switchSpTab(el, tab){
+  document.querySelectorAll('.sp-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['style','refs','output'].forEach(t=>{
+    const el2 = document.getElementById('tab-'+t);
+    if(el2) el2.style.display = t===tab ? '' : 'none';
+  });
+}
+
+const OUTPUT_ICONS = ['🏙','🌃','🎨','🖼','🌆','🎭','🌉','🏛'];
+const OUTPUT_BG = ['#1a1a2e','#16213e','#0f3460','#533483','#2d6a4f','#3d2b1f','#1a2e1a','#2e1a2e'];
+
+function generateVariants(){
+  const btn = document.getElementById('gen-main-btn');
+  btn.classList.add('loading');
+  btn.textContent = 'Gerando…';
+
+  // Switch to output tab
+  document.querySelectorAll('.sp-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.sp-tab:nth-child(3)').classList.add('active');
+  switchSpTab(document.querySelector('.sp-tab:nth-child(3)'), 'output');
+
+  const loadingGrid = document.getElementById('out-loading-grid');
+  const outputGrid = document.getElementById('output-grid');
+  loadingGrid.style.display='grid';
+  outputGrid.innerHTML='';
+
+  setTimeout(()=>{
+    loadingGrid.style.display='none';
+    genCount = Math.min(genCount + 4, 16);
+    document.getElementById('gen-count').textContent = `${genCount} / 16 gerações`;
+    buildOutputGrid();
+    btn.classList.remove('loading');
+    btn.textContent = 'Gerar variações';
+  }, 2400);
+}
+
+function buildOutputGrid(){
+  const grid = document.getElementById('output-grid');
+  const variants = OUTPUT_ICONS.slice(0, Math.min(genCount, 8));
+  grid.innerHTML = variants.map((icon, i)=>`
+    <div class="out-thumb ${i===0?'sel':''}" onclick="selectOutput(this)">
+      <div class="out-thumb-bg" style="background:${OUTPUT_BG[i]}">${icon}</div>
+      <div class="out-thumb-label">v${i+1}</div>
+    </div>
+  `).join('');
+}
+
+function selectOutput(el){
+  document.querySelectorAll('.out-thumb').forEach(t=>t.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function randomizeSeed(){
+  document.getElementById('seed-val').textContent = Math.floor(Math.random()*9999);
+}
+
+function exportAll(){
+  alert('Exportando variações selecionadas… Em breve disponível.');
+}
+
+function sendToWorkflow(){
+  alert('Enviando visual DNA para Campaign OS. As referências serão vinculadas à campanha ativa.');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tropicOS — Campaign OS</title>
+<style>
+
+@font-face {
+  font-family: 'PPFragment';
+  src: url('./fonts/PPFragment-SerifLight.woff') format('woff');
+  font-weight: 300; font-display: swap;
+}
+@font-face {
+  font-family: 'PPFragment';
+  src: url('./fonts/PPFragment-SerifRegular.otf') format('opentype');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Ekstra';
+  src: url('./fonts/Ekstra-Regular.otf') format('opentype');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Ekstra';
+  src: url('./fonts/Ekstra-Medium.otf') format('opentype');
+  font-weight: 500; font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-canvas:        #ffffff;
+  --bg-surface:       #ffffff;
+  --bg-surface-hover: #f7f7f7;
+  --bg-active:        #fafffd;
+  --border-subtle:    #e8e8e8;
+  --border-default:   #d9d9d9;
+  --border-accent:    rgba(50,238,102,0.35);
+  --text-primary:     #111111;
+  --text-secondary:   #555555;
+  --text-tertiary:    #999999;
+  --accent:           #32EE66;
+  --accent-glow:      rgba(50,238,102,0.15);
+  --font-editorial:   'PPFragment', Georgia, serif;
+  --font-ui:          'Ekstra', system-ui, sans-serif;
+  --topbar-h:         52px;
+  --sidebar-w:        185px;
+  --sidebar-w-sm:     52px;
+  --shadow-sm:        0 1px 4px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:        0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg:        0 8px 24px rgba(0,0,0,.10), 0 4px 8px rgba(0,0,0,.05);
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --ease: cubic-bezier(0.2,0,0,1);
+  --fast: 140ms;
+  --normal: 220ms;
+  --slow: 360ms;
+}
+
+/* Dark Mode */
+:root.dark-mode {
+  --bg-canvas:        #1f1f1f;
+  --bg-surface:       #1f1f1f;
+  --bg-surface-hover: #1f1f1f;
+  --bg-active:        #1f1f1f;
+  --border-subtle:    #3a3a3a;
+  --border-default:   #4a4a4a;
+  --border-accent:    rgba(50,238,102,0.25);
+  --text-primary:     #f0f0f0;
+  --text-secondary:   #a8a8a8;
+  --text-tertiary:    #767676;
+}
+
+@media (prefers-reduced-motion: reduce) { :root { --fast:0ms; --normal:0ms; --slow:0ms; } }
+
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font-ui); font-size: 14px; background: var(--bg-canvas); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: none; box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent); }
+
+/* ── APP SHELL ── */
+.app {
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-areas: "topbar topbar" "sidebar main";
+  height: 100vh;
+  transition: grid-template-columns var(--normal) var(--ease);
+}
+.app.collapsed { grid-template-columns: 48px 1fr; }
+
+/* ── TOP BAR ── */
+.topbar {
+  grid-area: topbar;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center;
+  padding: 0 20px 0 0;
+  z-index: 200; position: relative;
+}
+.topbar-logo {
+  width: var(--sidebar-w); flex-shrink: 0;
+  display: flex; align-items: center; padding: 0 20px; gap: 10px;
+  height: 100%;
+  transition: width var(--normal) var(--ease);
+}
+.app.collapsed .topbar-logo { width: var(--sidebar-w-sm); padding: 0; justify-content: center; }
+.topbar-logo img { transition: opacity var(--fast) var(--ease), max-width var(--normal) var(--ease); }
+.app.collapsed .topbar-logo img { opacity: 0; max-width: 0; pointer-events: none; }
+
+.topbar-context { flex: 1; display: flex; align-items: center; padding: 0 32px; gap: 32px; min-width: 0; }
+
+.topbar-right { display: flex; align-items: center; gap: 8px; padding-left: 16px; }
+.icon-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: none; border-radius: var(--radius-md); cursor: pointer; color: var(--text-tertiary); transition: background var(--fast), color var(--fast); position: relative; }
+.icon-btn:hover { background: var(--bg-canvas); color: var(--text-primary); }
+
+/* Dark Mode Toggle Switch */
+.dark-mode-toggle {
+  width: 48px; height: 28px;
+  background: #d0d0d0; border: none; border-radius: 99px;
+  cursor: pointer; transition: all var(--normal);
+  user-select: none; position: relative; padding: 0;
+  display: flex; align-items: center; padding: 2px;
+}
+.dark-mode-toggle:hover { background: #c0c0c0; }
+.dark-mode-toggle.active { background: #3a3a3a; }
+.dark-mode-toggle.active:hover { background: #4a4a4a; }
+
+.toggle-dot {
+  width: 24px; height: 24px;
+  background: white; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--normal);
+  color: #666666; font-size: 12px;
+  position: absolute; left: 2px;
+}
+.dark-mode-toggle.active .toggle-dot {
+  background: #5a5a5a;
+  left: calc(100% - 26px);
+  color: #e0e0e0;
+}
+.dark-mode-toggle .sun-icon { display: block; }
+.dark-mode-toggle .moon-icon { display: none; }
+.dark-mode-toggle.active .sun-icon { display: none; }
+.dark-mode-toggle.active .moon-icon { display: block; }
+.avatar { width: 28px; height: 28px; background: var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: var(--bg-canvas); cursor: pointer; letter-spacing: 0.02em; }
+
+/* ── SIDEBAR ── */
+.sidebar { grid-area: sidebar; background: var(--bg-surface); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; overflow: visible; position: relative; }
+.sidebar-toggle { position: absolute; top: 16px; right: -12px; width: 24px; height: 24px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-tertiary); box-shadow: var(--shadow-sm); z-index: 10; transition: background var(--fast); }
+.sidebar-toggle:hover { background: var(--bg-canvas); color: var(--text-primary); }
+.sidebar-toggle svg { transition: transform var(--normal) var(--ease); }
+.app.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+
+.sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px 0; scrollbar-width: thin; scrollbar-color: var(--border-default) transparent; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin: 4px 8px; border-radius: var(--radius-md); cursor: pointer; color: var(--text-secondary); font-size: 13px; font-weight: 400; text-decoration: none; transition: background var(--fast), color var(--fast); min-height: 40px; position: relative; user-select: none; }
+.nav-item:hover { background: var(--bg-canvas); color: var(--text-primary); }
+.nav-item.active { background: var(--bg-active); color: var(--text-primary); font-weight: 500; }
+.nav-item.active::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 16px; background: var(--accent); border-radius: 0 2px 2px 0; margin-left: -6px; }
+.nav-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; opacity: 0.5; transition: opacity var(--fast); }
+.nav-item:hover .nav-icon, .nav-item.active .nav-icon { opacity: 1; }
+.nav-label { flex: 1; overflow: hidden; text-overflow: ellipsis; transition: opacity var(--fast); }
+.app.collapsed .nav-label { opacity: 0; width: 0; pointer-events: none; }
+.nav-divider { height: 1px; background: var(--border-subtle); margin: 12px 16px; }
+.sidebar-footer { padding: 12px 0; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; }
+[data-tooltip]::after { content: attr(data-tooltip); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); background: var(--text-primary); color: white; font-size: 11px; white-space: nowrap; padding: 5px 10px; border-radius: var(--radius-sm); pointer-events: none; opacity: 0; transition: opacity var(--fast); z-index: 300; font-family: var(--font-ui); }
+.app.collapsed [data-tooltip]:hover::after { opacity: 1; }
+
+.app.collapsed .sidebar-nav { padding: 12px 0; }
+.app.collapsed .nav-item { padding: 8px 0 !important; }
+.app.collapsed .nav-icon { margin: 0 auto; }
+.app.collapsed .sidebar-footer { padding: 8px 0; }
+
+/* ── MAIN ── */
+.main { grid-area: main; overflow: hidden; display: flex; flex-direction: column; background: var(--bg-canvas); }
+
+/* ── WORKFLOW HEADER ── */
+.wf-header {
+  background: var(--bg-surface);
+  padding: 28px 48px 0;
+  flex-shrink: 0;
+}
+.wf-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.wf-title-block { flex: 1; min-width: 0; }
+.wf-title { font-family: var(--font-editorial); font-weight: 300; font-size: clamp(1.75rem, 2.5vw, 2.25rem); letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.05; }
+.wf-desc { font-size: 13px; color: var(--text-secondary); margin-top: 8px; max-width: 640px; line-height: 1.55; }
+.wf-desc-meta { color: var(--text-tertiary); }
+
+/* Progress + Run cluster */
+.wf-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.wf-prog { display: flex; align-items: center; gap: 10px; }
+.prog-track { width: 120px; height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width var(--slow) var(--ease); }
+.prog-label { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+
+.btn-run {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--accent); color: #0f0f0f;
+  border: none; border-radius: var(--radius-md);
+  font-family: var(--font-ui); font-size: 13px; font-weight: 500;
+  padding: 9px 18px; cursor: pointer;
+  transition: background var(--fast), box-shadow var(--fast);
+  flex-shrink: 0;
+}
+.btn-run:hover { background: #5ff0a0; box-shadow: 0 0 0 3px var(--accent-glow); }
+.btn-run svg { flex-shrink: 0; }
+
+/* ── WORKFLOW CANVAS ── */
+.wf-canvas {
+  flex: 1; overflow: auto; padding: 24px 48px 48px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+/* Phase section */
+.phase-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--fast);
+}
+.phase-section.active-phase {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 1px var(--border-accent), var(--shadow-sm);
+}
+
+.phase-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer; user-select: none;
+  transition: background var(--fast);
+}
+.phase-header:hover { background: var(--bg-surface-hover); }
+.phase-header-left { display: flex; align-items: center; gap: 12px; }
+.phase-badge {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 10px; font-weight: 500; color: var(--text-tertiary);
+  flex-shrink: 0; transition: background var(--fast), border-color var(--fast), color var(--fast);
+}
+.phase-section.active-phase .phase-badge {
+  background: var(--accent); border-color: var(--accent); color: #0f0f0f;
+}
+.phase-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.phase-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+.phase-header-right { display: flex; align-items: center; gap: 12px; }
+.phase-chevron { color: var(--text-tertiary); transition: transform var(--normal) var(--ease); }
+.phase-section.collapsed .phase-chevron { transform: rotate(-90deg); }
+
+/* Agent list */
+.agent-list {
+  display: flex; flex-direction: column;
+  background: var(--bg-surface);
+  transition: max-height var(--slow) var(--ease), opacity var(--normal) var(--ease);
+  max-height: 2000px;
+  overflow: hidden;
+  border-top: 1px solid var(--border-subtle);
+}
+.phase-section.collapsed .agent-list { max-height: 0; opacity: 0; border-top: none; }
+
+.agent-item {
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: background var(--fast);
+  display: flex; align-items: center;
+  padding: 14px 20px; gap: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+.agent-item:last-child { border-bottom: none; }
+.agent-item:hover { background: var(--bg-surface-hover); }
+.agent-item.selected { background: var(--bg-active); }
+.agent-item.selected::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); border-radius: 0 1px 1px 0; }
+
+.agent-card-body { flex: 1; display: flex; align-items: center; gap: 20px; padding: 0; }
+.agent-name {
+  font-family: var(--font-editorial); font-weight: 300; font-size: 1rem;
+  letter-spacing: -.01em; color: var(--text-primary); line-height: 1.2;
+  min-width: 180px; flex-shrink: 0;
+}
+.agent-preview { font-size: 11px; color: var(--text-secondary); line-height: 1.5; flex: 1; }
+.agent-status {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; color: var(--text-tertiary);
+  white-space: nowrap; flex-shrink: 0;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-default); flex-shrink: 0; }
+.status-dot.ready { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
+.status-dot.done { background: #555; }
+
+/* ── DETAIL PANEL ── */
+.detail-panel {
+  position: fixed; right: 0; top: var(--topbar-h); bottom: 0;
+  width: 360px;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  box-shadow: -8px 0 32px rgba(0,0,0,.06);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--normal) var(--ease);
+  z-index: 100;
+}
+.detail-panel.open { transform: translateX(0); }
+
+.dp-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.dp-close { width: 28px; height: 28px; border: none; background: none; border-radius: var(--radius-sm); cursor: pointer; color: var(--text-tertiary); font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; transition: background var(--fast), color var(--fast); flex-shrink: 0; }
+.dp-close:hover { background: var(--bg-canvas); color: var(--text-primary); }
+.dp-num { font-size: 10px; font-weight: 500; letter-spacing: .08em; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+.dp-name { font-family: var(--font-editorial); font-weight: 400; font-size: 1.25rem; letter-spacing: -.01em; color: var(--text-primary); line-height: 1.2; padding-right: 8px; }
+
+.dp-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; scrollbar-width: thin; scrollbar-color: var(--border-default) transparent; }
+.dp-label { font-size: 9px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
+.dp-text { font-size: 12px; color: var(--text-secondary); line-height: 1.65; }
+.dp-divider { height: 1px; background: var(--border-subtle); }
+
+.dp-output {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+.dp-output-label { font-size: 9px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
+.dp-output-text { font-size: 11px; color: var(--text-primary); line-height: 1.5; }
+
+.dp-tools-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.dp-tool { font-size: 10px; padding: 3px 10px; background: var(--bg-canvas); border: 1px solid var(--border-subtle); border-radius: 99px; color: var(--text-secondary); }
+
+.dp-footer { padding: 16px 20px; border-top: 1px solid var(--border-subtle); }
+.btn-launch {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--accent); color: #0f0f0f;
+  border: none; border-radius: var(--radius-md);
+  font-family: var(--font-ui); font-size: 13px; font-weight: 500;
+  padding: 10px; cursor: pointer;
+  transition: background var(--fast);
+}
+.btn-launch:hover { background: #5ff0a0; }
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <a href="./library.html" style="display:flex;align-items:center;line-height:0"><img src="./assets/logo-wordmark-gradient.svg" alt="tropicOS" height="29" style="display:block;max-width:182px;object-fit:contain"></a>
+    </div>
+    <div class="topbar-context">
+      <a href="#" class="nav-link" data-view-nav="home" style="text-decoration: none; color: var(--text-secondary); font-size: 13px; transition: color var(--fast);">Home</a>
+      <a href="#" class="nav-link" data-view-nav="about" style="text-decoration: none; color: var(--text-secondary); font-size: 13px; transition: color var(--fast);">About</a>
+      <a href="#" class="nav-link" data-view-nav="tools" style="text-decoration: none; color: var(--text-secondary); font-size: 13px; transition: color var(--fast);">Tools</a>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" id="lang-toggle" aria-label="Language" style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em;">PT</button>
+      <div class="dark-mode-toggle" id="dark-mode-toggle" role="switch" aria-checked="false" title="Dark Mode">
+        <div class="toggle-dot">
+          <svg class="sun-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6l1.4 1.4M13 3l-1.4 1.4M4.4 11.6l-1.4 1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          <svg class="moon-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7z" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="avatar">FS</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Recolher sidebar" data-i18n-aria="Recolher sidebar">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="sidebar-nav">
+      <a class="nav-item" href="./library.html?filter=strategy">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12l4-4 3 3 5-7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="nav-label" data-i18n="Estratégia">Estratégia</span>
+      </a>
+      <a class="nav-item" href="./library.html?filter=creative">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13C5 11 5 9 8 8s3-3 5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3 3c2 2 2 4 5 5s3 3 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        <span class="nav-label" data-i18n="Criativo">Criativo</span>
+      </a>
+      <a class="nav-item" href="./library.html?filter=content">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2.5 12.5l1-3L10 3l2 2-6.5 6.5-3 1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.5 4.5l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        <span class="nav-label" data-i18n="Conteúdo">Conteúdo</span>
+      </a>
+      <a class="nav-item active" href="./workflow.html">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="13" cy="4" r="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="13" cy="12" r="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 8h3l3-4M7.5 8h3l2 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="nav-label" data-i18n="Fluxos">Fluxos</span>
+      </a>
+      <div class="nav-divider"></div>
+      <a class="nav-item" href="./library.html?filter=my-files">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3.5A1.5 1.5 0 014.5 2h4.086a1 1 0 01.707.293l3.414 3.414A1 1 0 0113 6.414V12.5A1.5 1.5 0 0111.5 14h-7A1.5 1.5 0 013 12.5v-9z" stroke="currentColor" stroke-width="1.3"/><path d="M9 2v3.5a.5.5 0 00.5.5H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        <span class="nav-label" data-i18n="Meus Arquivos">Meus Arquivos</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <a class="nav-item" href="#" data-tooltip="Configuração"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span><span class="nav-label" data-i18n="Configuração">Configuração</span></a>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Workflow header -->
+    <div class="wf-header">
+      <div class="wf-meta">
+        <div class="wf-title-block">
+          <div class="wf-title" data-i18n="Campaign OS">Campaign OS</div>
+          <div class="wf-desc">
+            <span data-i18n="Do brief de cliente ao case film de apresentação. Exploração, estratégia, criativo e produção em um fluxo orquestrado por IA.">Do brief de cliente ao case film de apresentação. Exploração, estratégia, criativo e produção em um fluxo orquestrado por IA.</span>
+            <span class="wf-desc-meta" data-i18n="Workflow · 10 agentes · 4 fases">Workflow · 10 agentes · 4 fases</span>
+          </div>
+        </div>
+        <div class="wf-actions">
+          <div class="wf-prog">
+            <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+            <span class="prog-label" id="prog-label" data-i18n="0 / 10 agentes">0 / 10 agentes</span>
+          </div>
+          <button class="btn-run" onclick="startRun()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2l7 4-7 4V2z" fill="currentColor"/></svg>
+            <span data-i18n="Iniciar campanha">Iniciar campanha</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="wf-canvas" id="canvas">
+
+      <!-- Phase 1: Exploração -->
+      <div class="phase-section active-phase" id="phase-1">
+        <div class="phase-header" onclick="togglePhase(this)">
+          <div class="phase-header-left">
+            <div class="phase-badge">01</div>
+            <div>
+              <div class="phase-name" data-i18n="Exploração">Exploração</div>
+              <div class="phase-sub" data-i18n="Brief · Pesquisa · Sinais culturais · Verdade da audiência">Brief · Pesquisa · Sinais culturais · Verdade da audiência</div>
+            </div>
+          </div>
+          <div class="phase-header-right">
+            <svg class="phase-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="agent-list">
+          <div class="agent-item selected" onclick="selectAgent(1)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Project Mapping</div>
+              <div class="agent-preview" data-i18n="Consolida o brief inicial. Gera perguntas provocativas e estrutura o ponto de entrada do processo.">Consolida o brief inicial. Gera perguntas provocativas e estrutura o ponto de entrada do processo.</div>
+              <div class="agent-status"><div class="status-dot ready"></div><span data-i18n="Pronto para executar">Pronto para executar</span></div>
+            </div>
+          </div>
+          <div class="agent-item" onclick="selectAgent(2)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Exploration</div>
+              <div class="agent-preview" data-i18n="Conecta pontos desconexos para descobrir territórios estratégicos inexplorados e tensões ocultas.">Conecta pontos desconexos para descobrir territórios estratégicos inexplorados e tensões ocultas.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando 01">Aguardando 01</span></div>
+            </div>
+          </div>
+          <div class="agent-item" onclick="selectAgent(3)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Persona Builder</div>
+              <div class="agent-preview" data-i18n="Transforma dados frios em personas vivas com contradições e motivações ocultas.">Transforma dados frios em personas vivas com contradições e motivações ocultas.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando 02">Aguardando 02</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 2: Estratégia -->
+      <div class="phase-section collapsed" id="phase-2">
+        <div class="phase-header" onclick="togglePhase(this)">
+          <div class="phase-header-left">
+            <div class="phase-badge">02</div>
+            <div>
+              <div class="phase-name" data-i18n="Estratégia">Estratégia</div>
+              <div class="phase-sub" data-i18n="Plataforma criativa · Insight · Tensão · Desafio">Plataforma criativa · Insight · Tensão · Desafio</div>
+            </div>
+          </div>
+          <div class="phase-header-right">
+            <svg class="phase-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="agent-list">
+          <div class="agent-item" onclick="selectAgent(4)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Visual Universe Architect</div>
+              <div class="agent-preview" data-i18n="5 lentes visuais radicalmente diferentes, cada uma com paleta e framework conceitual próprios.">5 lentes visuais radicalmente diferentes, cada uma com paleta e framework conceitual próprios.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando fase 01">Aguardando fase 01</span></div>
+            </div>
+          </div>
+          <div class="agent-item" onclick="selectAgent(5)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Creative Brief</div>
+              <div class="agent-preview" data-i18n="Sintetiza territórios e personas em um brief que abre possibilidades em vez de fechá-las.">Sintetiza territórios e personas em um brief que abre possibilidades em vez de fechá-las.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando 04">Aguardando 04</span></div>
+            </div>
+          </div>
+          <div class="agent-item" onclick="selectAgent(6)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Creative Strategy</div>
+              <div class="agent-preview" data-i18n="Diagnóstico estratégico, 3–5 territórios criativos com ativações e jornada do consumidor simulada.">Diagnóstico estratégico, 3–5 territórios criativos com ativações e jornada do consumidor simulada.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando 05">Aguardando 05</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 3: Criativo -->
+      <div class="phase-section collapsed" id="phase-3">
+        <div class="phase-header" onclick="togglePhase(this)">
+          <div class="phase-header-left">
+            <div class="phase-badge">03</div>
+            <div>
+              <div class="phase-name" data-i18n="Criativo">Criativo</div>
+              <div class="phase-sub" data-i18n="Conceito · Ideia · Universo visual · Jornada">Conceito · Ideia · Universo visual · Jornada</div>
+            </div>
+          </div>
+          <div class="phase-header-right">
+            <svg class="phase-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="agent-list">
+          <div class="agent-item" onclick="selectAgent(7)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Journey Amplification</div>
+              <div class="agent-preview" data-i18n="Transforma gaps de comunicação em oportunidades criativas e vantagens competitivas.">Transforma gaps de comunicação em oportunidades criativas e vantagens competitivas.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando fase 02">Aguardando fase 02</span></div>
+            </div>
+          </div>
+          <div class="agent-item" onclick="selectAgent(8)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Illustration DNA</div>
+              <div class="agent-preview" data-i18n="Extrai o DNA visual de uma referência e constrói um sistema de estilo completo com Imagen 3.">Extrai o DNA visual de uma referência e constrói um sistema de estilo completo com Imagen 3.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando 07">Aguardando 07</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 4: Produção -->
+      <div class="phase-section collapsed" id="phase-4">
+        <div class="phase-header" onclick="togglePhase(this)">
+          <div class="phase-header-left">
+            <div class="phase-badge">04</div>
+            <div>
+              <div class="phase-name" data-i18n="Produção e Conteúdo">Produção e Conteúdo</div>
+              <div class="phase-sub" data-i18n="Assets · Variações · Entrega · Filme de apresentação">Assets · Variações · Entrega · Filme de apresentação</div>
+            </div>
+          </div>
+          <div class="phase-header-right">
+            <svg class="phase-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="agent-list">
+          <div class="agent-item" onclick="selectAgent(9)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Visual Refinement</div>
+              <div class="agent-preview" data-i18n="Direção visual aprovada → 10× variações execucionais em múltiplos formatos.">Direção visual aprovada → 10× variações execucionais em múltiplos formatos.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando fase 03">Aguardando fase 03</span></div>
+            </div>
+          </div>
+          <div class="agent-item" onclick="selectAgent(10)" tabindex="0">
+            <div class="agent-card-body">
+              <div class="agent-name">Presentation Video</div>
+              <div class="agent-preview" data-i18n="Roteiro de case film cinematográfico 60–75s com impacto para clientes e liderança.">Roteiro de case film cinematográfico 60–75s com impacto para clientes e liderança.</div>
+              <div class="agent-status"><div class="status-dot empty"></div><span data-i18n="Aguardando 09">Aguardando 09</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /canvas -->
+
+  </main>
+
+</div><!-- /app -->
+
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="dp" role="complementary" aria-label="Detalhes do agente">
+  <div class="dp-header">
+    <div>
+      <div class="dp-num" id="dp-num"></div>
+      <div class="dp-name" id="dp-name"></div>
+    </div>
+    <button class="dp-close" onclick="closeDetail()" aria-label="Fechar">×</button>
+  </div>
+  <div class="dp-body">
+    <div>
+      <div class="dp-label" data-i18n="O que faz">O que faz</div>
+      <div class="dp-text" id="dp-desc"></div>
+    </div>
+    <div class="dp-divider"></div>
+    <div class="dp-output">
+      <div class="dp-output-label" data-i18n="Output">Output</div>
+      <div class="dp-output-text" id="dp-output"></div>
+    </div>
+    <div>
+      <div class="dp-label" data-i18n="Ferramentas">Ferramentas</div>
+      <div class="dp-tools-list" id="dp-tools"></div>
+    </div>
+  </div>
+  <div class="dp-footer">
+    <button class="btn-launch" id="dp-launch" onclick="launchAgent()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2l7 4-7 4V2z" fill="currentColor"/></svg>
+      <span data-i18n="Abrir ferramenta">Abrir ferramenta</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// ── AGENT DATA (PT + EN side-by-side) ──
+const AGENTS = {
+  1:  { numPt:'01 · Exploração', numEn:'01 · Exploration', name:'Project Mapping',
+        descPt:'Organiza kickoffs e gera Master Project Documents executivos a partir do brief do cliente. Escopo, cronograma, riscos e responsabilidades prontos para circular entre agência e cliente — eliminando o vai-e-vem manual de alinhamento inicial.',
+        descEn:'Organizes kickoffs and generates executive Master Project Documents from the client brief. Scope, timeline, risks and responsibilities ready to circulate between agency and client — eliminating the manual back-and-forth of initial alignment.',
+        outPt:'Master Project Document com escopo, fases, riscos e entregas',
+        outEn:'Master Project Document with scope, phases, risks and deliverables',
+        tools:['Claude'], url:'../creative-workflow/?skill=project-mapping' },
+  2:  { numPt:'02 · Exploração', numEn:'02 · Exploration', name:'Exploration',
+        descPt:'Parte do brief e cria conexões laterais inesperadas entre sinais culturais, movimentos de concorrentes e verdades do consumidor. Propõe territórios estratégicos inexplorados que o planejamento linear jamais alcançaria.',
+        descEn:'Starts from the brief and creates unexpected lateral connections between cultural signals, competitor moves and consumer truths. Proposes unexplored strategic territories that linear planning would never reach.',
+        outPt:'3–5 territórios estratégicos com racional e diferencial',
+        outEn:'3–5 strategic territories with rationale and differentiator',
+        tools:['Claude'], url:'../creative-workflow/?skill=creative-strategy' },
+  3:  { numPt:'03 · Exploração', numEn:'03 · Exploration', name:'Personas Creator',
+        descPt:'Gera personas detalhadas com narrativa etnográfica, psicografia profunda, jornada de compra e implicações estratégicas. Perfis culturalmente ricos que vão além de dados demográficos — pessoas reais com contradições e motivações.',
+        descEn:'Generates detailed personas with ethnographic narrative, deep psychographics, purchase journey and strategic implications. Culturally rich profiles that go beyond demographics — real people with contradictions and motivations.',
+        outPt:'2–3 personas ricas com detalhe biográfico, jornada e tensão com a marca',
+        outEn:'2–3 rich personas with biographical detail, journey and brand tension',
+        tools:['Claude'], url:'../creative-workflow/?skill=persona-mkt' },
+  4:  { numPt:'04 · Estratégia', numEn:'04 · Strategy', name:'Visual Universe Architect',
+        descPt:'Passa o mesmo brief por 5 lentes visuais radicalmente diferentes — cada uma com sua própria lógica estética, referências, paleta e framework conceitual. Expande a imaginação visual do time antes de comprometer com uma única direção.',
+        descEn:'Runs the same brief through 5 radically different visual lenses — each with its own aesthetic logic, references, palette and conceptual framework. Expands the team\u2019s visual imagination before committing to a single direction.',
+        outPt:'5 territórios visuais distintos com mood, paleta e racional',
+        outEn:'5 distinct visual territories with mood, palette and rationale',
+        tools:['Claude','Weavy.ai'], url:'../creative-workflow/?skill=persona-visual' },
+  5:  { numPt:'05 · Estratégia', numEn:'05 · Strategy', name:'Creative Brief',
+        descPt:'Sintetiza o mapa de inteligência, os territórios e as personas em um brief criativo que abre possibilidades em vez de fechá-las. Desenhado para ser ignição criativa — não uma gaiola burocrática.',
+        descEn:'Synthesizes the intelligence map, territories and personas into a creative brief that opens possibilities instead of closing them. Designed to be creative ignition — not a bureaucratic cage.',
+        outPt:'Brief criativo expandido com múltiplos enquadramentos do desafio',
+        outEn:'Expanded creative brief with multiple framings of the challenge',
+        tools:['Claude'], url:'../creative-workflow/?skill=creative-strategy' },
+  6:  { numPt:'06 · Estratégia', numEn:'06 · Strategy', name:'Creative Strategy',
+        descPt:'Constrói a narrativa estratégica completa: diagnóstico estratégico, 3–5 territórios criativos com ativações detalhadas, jornada simulada do consumidor e análise comparativa. Plataforma com convicção para trabalho ousado.',
+        descEn:'Builds the full strategic narrative: strategic diagnosis, 3–5 creative territories with detailed activations, simulated consumer journey and comparative analysis. Platform with conviction for bold work.',
+        outPt:'Plataforma estratégica com insight, tensão, territórios e desafio criativo',
+        outEn:'Strategic platform with insight, tension, territories and creative challenge',
+        tools:['Claude'], url:'../creative-workflow/?skill=creative-strategy' },
+  7:  { numPt:'07 · Criativo', numEn:'07 · Creative', name:'Communication Journey',
+        descPt:'Gera jornadas de mídia criativas baseadas em persona, brief e guia de marca. Snapshot da rotina da persona, momentos de mídia mapeados e ideias criativas originais por touchpoint — pronto para planejamento de canais.',
+        descEn:'Generates creative media journeys based on persona, brief and brand guide. Snapshot of persona routine, mapped media moments and original creative ideas per touchpoint — ready for channel planning.',
+        outPt:'Mapa de touchpoints com oportunidades criativas e ideias por momento',
+        outEn:'Touchpoint map with creative opportunities and ideas per moment',
+        tools:['Claude'], url:'../creative-workflow/?skill=jornada-midia' },
+  8:  { numPt:'08 · Criativo', numEn:'08 · Creative', name:'Illustration DNA',
+        descPt:'Extrai o DNA visual de uma referência de ilustração e constrói um sistema completo: regras de estilo, paleta, composição e direção de arte. Gera variações consistentes com a identidade visual da campanha usando Imagen 3.',
+        descEn:'Extracts the visual DNA of an illustration reference and builds a complete system: style rules, palette, composition and art direction. Generates variations consistent with the campaign\u2019s visual identity using Imagen 3.',
+        outPt:'Sistema visual com guia de direção de arte, DNA extraído e variações',
+        outEn:'Visual system with art direction guide, extracted DNA and variations',
+        tools:['Imagen 3'], url:'../illustration-dna/' },
+  9:  { numPt:'09 · Produção', numEn:'09 · Production', name:'Visual Refinement',
+        descPt:'Pega a direção visual aprovada e gera 10× mais variações execucionais em fração do tempo. Grid editorial, adaptações de formato, variações tipográficas e alternativas de composição — acelerando produção de assets para apresentação.',
+        descEn:'Takes the approved visual direction and generates 10× more executional variations in a fraction of the time. Editorial grid, format adaptations, typographic variations and composition alternatives — accelerating asset production for presentation.',
+        outPt:'10× variações de assets em múltiplos formatos, prontos para apresentação',
+        outEn:'10× asset variations across multiple formats, ready for presentation',
+        tools:['Imagen 3','tropicOS Grid'], url:'../layout/' },
+  10: { numPt:'10 · Produção', numEn:'10 · Production', name:'Presentation Video',
+        descPt:'Pega a jornada criativa completa — brief, estratégia, territórios, sistema visual e assets finais — e roteiriza um filme de case cinematográfico de 60–75s. Estrutura narrativa com beats emocionais para máximo impacto no cliente.',
+        descEn:'Takes the full creative journey — brief, strategy, territories, visual system and final assets — and scripts a cinematic 60–75s case film. Narrative structure with emotional beats for maximum client impact.',
+        outPt:'Roteiro de case film 60–75s + estrutura de apresentação executiva',
+        outEn:'60–75s case film script + executive presentation structure',
+        tools:['Gemini','AD Script Engine'], url:'../story-arc/' },
+};
+
+let sel = 1;
+function currentLang() { return localStorage.getItem('lang') || 'pt'; }
+
+function selectAgent(id) {
+  document.querySelectorAll('.agent-item').forEach(el => el.classList.remove('selected'));
+  if (event && event.currentTarget) event.currentTarget.classList.add('selected');
+  sel = id;
+  renderDetail();
+  document.getElementById('dp').classList.add('open');
+}
+
+function renderDetail() {
+  const a = AGENTS[sel];
+  if (!a) return;
+  const lang = currentLang();
+  document.getElementById('dp-num').textContent  = lang === 'en' ? a.numEn : a.numPt;
+  document.getElementById('dp-name').textContent = a.name;
+  document.getElementById('dp-desc').textContent = lang === 'en' ? a.descEn : a.descPt;
+  document.getElementById('dp-output').textContent = lang === 'en' ? a.outEn : a.outPt;
+  document.getElementById('dp-tools').innerHTML = a.tools.map(t => `<span class="dp-tool">${t}</span>`).join('');
+}
+
+function closeDetail() {
+  document.getElementById('dp').classList.remove('open');
+  document.querySelectorAll('.agent-item').forEach(el => el.classList.remove('selected'));
+}
+
+function launchAgent() {
+  const a = AGENTS[sel];
+  if (a && a.url) window.location.href = a.url;
+}
+
+function togglePhase(header) {
+  const section = header.closest('.phase-section');
+  const isCollapsed = section.classList.contains('collapsed');
+  document.querySelectorAll('.phase-section').forEach(s => {
+    s.classList.add('collapsed');
+    s.classList.remove('active-phase');
+  });
+  if (isCollapsed) {
+    section.classList.remove('collapsed');
+    section.classList.add('active-phase');
+  }
+}
+
+function startRun() {
+  document.querySelectorAll('.phase-section').forEach(s => s.classList.remove('collapsed'));
+  let count = 0;
+  const fill  = document.getElementById('prog-fill');
+  const label = document.getElementById('prog-label');
+  const interval = setInterval(() => {
+    count++;
+    fill.style.width = (count/10*100) + '%';
+    const lang = currentLang();
+    const tpl  = lang === 'en' ? `${count} / 10 agents` : `${count} / 10 agentes`;
+    label.textContent = tpl;
+    label.removeAttribute('data-i18n');
+    const statuses = document.querySelectorAll('.status-dot');
+    if (statuses[count-1]) { statuses[count-1].classList.remove('empty'); statuses[count-1].classList.add('ready'); }
+    if (count >= 10) clearInterval(interval);
+  }, 400);
+}
+
+// ── DICTIONARY PT → EN ──
+const I18N_EN = {
+  // Sidebar / nav (shared with library)
+  "Estratégia": "Strategy",
+  "Criativo": "Creative",
+  "Conteúdo": "Content",
+  "Fluxos": "Workflows",
+  "Meus Arquivos": "My Files",
+  "Configuração": "Settings",
+
+  // Workflow header
+  "Campaign OS": "Campaign OS",
+  "Do brief de cliente ao case film de apresentação. Exploração, estratégia, criativo e produção em um fluxo orquestrado por IA.": "From client brief to case film delivery. Exploration, strategy, creative and production in an AI-orchestrated flow.",
+  "Workflow · 10 agentes · 4 fases": "Workflow · 10 agents · 4 phases",
+  "0 / 10 agentes": "0 / 10 agents",
+  "Iniciar campanha": "Start campaign",
+
+  // Phase names
+  "Exploração": "Exploration",
+  "Estratégia": "Strategy",
+  "Criativo": "Creative",
+  "Produção": "Production",
+  "Produção e Conteúdo": "Production & Content",
+
+  // Phase subtitles
+  "Brief · Pesquisa · Sinais culturais · Verdade da audiência": "Brief · Research · Cultural signals · Audience truth",
+  "Plataforma criativa · Insight · Tensão · Desafio": "Creative platform · Insight · Tension · Challenge",
+  "Conceito · Ideia · Universo visual · Jornada": "Concept · Idea · Visual universe · Journey",
+  "Assets · Variações · Entrega · Filme de apresentação": "Assets · Variations · Delivery · Case film",
+
+  // Status
+  "Pronto para executar": "Ready to run",
+  "Aguardando 01": "Waiting on 01",
+  "Aguardando 02": "Waiting on 02",
+  "Aguardando 04": "Waiting on 04",
+  "Aguardando 05": "Waiting on 05",
+  "Aguardando 07": "Waiting on 07",
+  "Aguardando 09": "Waiting on 09",
+  "Aguardando fase 01": "Waiting on phase 01",
+  "Aguardando fase 02": "Waiting on phase 02",
+  "Aguardando fase 03": "Waiting on phase 03",
+
+  // Agent previews
+  "Consolida o brief inicial. Gera perguntas provocativas e estrutura o ponto de entrada do processo.": "Consolidates the initial brief. Generates provocative questions and structures the entry point of the process.",
+  "Conecta pontos desconexos para descobrir territórios estratégicos inexplorados e tensões ocultas.": "Connects disconnected dots to uncover unexplored strategic territories and hidden tensions.",
+  "Transforma dados frios em personas vivas com contradições e motivações ocultas.": "Turns cold data into living personas with contradictions and hidden motivations.",
+  "5 lentes visuais radicalmente diferentes, cada uma com paleta e framework conceitual próprios.": "5 radically different visual lenses, each with its own palette and conceptual framework.",
+  "Sintetiza territórios e personas em um brief que abre possibilidades em vez de fechá-las.": "Synthesizes territories and personas into a brief that opens possibilities instead of closing them.",
+  "Diagnóstico estratégico, 3–5 territórios criativos com ativações e jornada do consumidor simulada.": "Strategic diagnosis, 3–5 creative territories with activations and simulated consumer journey.",
+  "Transforma gaps de comunicação em oportunidades criativas e vantagens competitivas.": "Turns communication gaps into creative opportunities and competitive advantages.",
+  "Extrai o DNA visual de uma referência e constrói um sistema de estilo completo com Imagen 3.": "Extracts the visual DNA of a reference and builds a complete style system with Imagen 3.",
+  "Direção visual aprovada → 10× variações execucionais em múltiplos formatos.": "Approved visual direction → 10× executional variations across multiple formats.",
+  "Roteiro de case film cinematográfico 60–75s com impacto para clientes e liderança.": "Cinematic 60–75s case film script with impact for clients and leadership.",
+
+  // Detail panel labels & buttons
+  "O que faz": "What it does",
+  "Output": "Output",
+  "Ferramentas": "Tools",
+  "Abrir ferramenta": "Open tool",
+
+  // aria-labels
+  "Recolher sidebar": "Collapse sidebar",
+  "Notificações": "Notifications",
+  "Configurações": "Settings"
+};
+
+function applyTranslations(lang) {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const ptKey = el.getAttribute('data-i18n');
+    if (!el.hasAttribute('data-i18n-pt')) {
+      el.setAttribute('data-i18n-pt', el.textContent);
+    }
+    if (lang === 'en') {
+      const en = I18N_EN[ptKey];
+      if (en) el.textContent = en;
+    } else {
+      el.textContent = el.getAttribute('data-i18n-pt') || ptKey;
+    }
+  });
+  // aria-labels
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+    const ptKey = el.getAttribute('data-i18n-aria');
+    const txt = (lang === 'en' && I18N_EN[ptKey]) ? I18N_EN[ptKey] : ptKey;
+    el.setAttribute('aria-label', txt);
+  });
+  document.documentElement.setAttribute('lang', lang === 'en' ? 'en' : 'pt-BR');
+  localStorage.setItem('lang', lang);
+  // Re-render detail panel if open with new language
+  renderDetail();
+}
+
+function toggleLanguage() {
+  const btn = document.getElementById('lang-toggle');
+  if (!btn) return;
+  const current = btn.textContent.trim();
+  const next = current === 'PT' ? 'EN' : 'PT';
+  btn.textContent = next;
+  applyTranslations(next.toLowerCase());
+}
+
+function toggleDarkMode() {
+  document.documentElement.classList.toggle('dark-mode');
+  const toggle = document.getElementById('dark-mode-toggle');
+  if (toggle) toggle.classList.toggle('active');
+}
+
+function showView(view) {
+  // Navigate back to library, choosing section
+  if (view === 'home') window.location.href = './library.html#home';
+  else if (view === 'about') window.location.href = './library.html#about';
+  else window.location.href = './library.html';
+}
+
+function setupAll() {
+  // Dark mode click
+  const darkBtn = document.getElementById('dark-mode-toggle');
+  if (darkBtn) {
+    darkBtn.onclick = function(e) { e.preventDefault(); toggleDarkMode(); return false; };
+    darkBtn.style.cursor = 'pointer';
+  }
+  // Language click
+  const langBtn = document.getElementById('lang-toggle');
+  if (langBtn) {
+    langBtn.onclick = function(e) { e.preventDefault(); toggleLanguage(); return false; };
+    langBtn.style.cursor = 'pointer';
+  }
+  // Sidebar toggle
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  if (sidebarToggle) {
+    sidebarToggle.onclick = function() {
+      const app = document.getElementById('app');
+      if (app) app.classList.toggle('collapsed');
+      return false;
+    };
+  }
+  // Topbar nav links
+  document.querySelectorAll('[data-view-nav]').forEach(link => {
+    link.onclick = function(e) {
+      e.preventDefault();
+      showView(this.getAttribute('data-view-nav'));
+      return false;
+    };
+  });
+  // Keyboard on agents
+  document.querySelectorAll('.agent-item').forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+  });
+  // Restore saved language
+  const savedLang = localStorage.getItem('lang') || 'pt';
+  if (savedLang === 'en') {
+    const btn = document.getElementById('lang-toggle');
+    if (btn) btn.textContent = 'EN';
+    applyTranslations('en');
+  }
+}
+
+window.addEventListener('load', setupAll);
+document.addEventListener('DOMContentLoaded', setupAll);
+</script>
+</body>
+</html>

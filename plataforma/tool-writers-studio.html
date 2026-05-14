@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tropicOS — Writers Studio</title>
+<style>
+
+@font-face { font-family:'PPFragment'; src:url('./fonts/PPFragment-SerifLight.woff') format('woff'); font-weight:300; font-display:swap; }
+@font-face { font-family:'PPFragment'; src:url('./fonts/PPFragment-SerifRegular.otf') format('opentype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Ekstra'; src:url('./fonts/Ekstra-Regular.otf') format('opentype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Ekstra'; src:url('./fonts/Ekstra-Medium.otf') format('opentype'); font-weight:500; font-display:swap; }
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg-canvas:      #f0f0f0;
+  --bg-surface:     #ffffff;
+  --bg-hover:       #f7f7f7;
+  --bg-active:      #fafffd;
+  --border-subtle:  #e8e8e8;
+  --border-default: #d9d9d9;
+  --border-accent:  rgba(50,238,102,0.3);
+  --text-primary:   #111111;
+  --text-secondary: #555555;
+  --text-tertiary:  #999999;
+  --accent:         #32EE66;
+  --accent-glow:    rgba(50,238,102,0.15);
+  --font-e: 'PPFragment', Georgia, serif;
+  --font-u: 'Ekstra', system-ui, sans-serif;
+  --topbar-h:   52px;
+  --sidebar-w:  228px;
+  --sidebar-sm: 52px;
+  --sh-sm: 0 1px 4px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --sh-md: 0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px;
+  --ease:cubic-bezier(0.2,0,0,1);
+  --fast:140ms; --normal:220ms; --slow:360ms;
+}
+@media(prefers-reduced-motion:reduce){:root{--fast:0ms;--normal:0ms;--slow:0ms}}
+
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-u);font-size:14px;background:var(--bg-canvas);color:var(--text-primary);-webkit-font-smoothing:antialiased}
+:focus-visible{outline:none;box-shadow:0 0 0 2px white,0 0 0 4px var(--accent)}
+
+/* ── SHELL ── */
+.app{display:grid;grid-template-rows:var(--topbar-h) 1fr;grid-template-columns:var(--sidebar-w) 1fr;grid-template-areas:"tb tb" "sb main";height:100vh;transition:grid-template-columns var(--normal) var(--ease)}
+.app.col{grid-template-columns:var(--sidebar-sm) 1fr}
+
+/* TOPBAR */
+.tb{grid-area:tb;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;padding:0 20px 0 0;z-index:200}
+.tb-logo{width:var(--sidebar-w);flex-shrink:0;display:flex;align-items:center;padding:0 20px;border-right:1px solid var(--border-subtle);height:100%;transition:width var(--normal) var(--ease)}
+.app.col .tb-logo{width:var(--sidebar-sm);padding:0;justify-content:center}
+.tb-logo img{transition:opacity var(--fast),max-width var(--normal)}
+.app.col .tb-logo img{opacity:0;max-width:0;pointer-events:none}
+.tb-ctx{flex:1;display:flex;align-items:center;padding:0 20px;gap:8px;min-width:0}
+.bc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-tertiary)}
+.bc a{color:var(--text-tertiary);text-decoration:none;transition:color var(--fast)}
+.bc a:hover{color:var(--text-primary)}
+.bc-sep{color:var(--border-default)}
+.bc-cur{color:var(--text-primary);font-weight:500}
+.tb-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:var(--r-md);font-size:11px;color:var(--text-secondary);margin-left:8px}
+.tb-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.tb-right{display:flex;align-items:center;gap:8px;padding-left:16px;margin-left:auto}
+.ib{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:var(--r-md);cursor:pointer;color:var(--text-tertiary);transition:background var(--fast),color var(--fast)}
+.ib:hover{background:var(--bg-canvas);color:var(--text-primary)}
+.av{width:28px;height:28px;background:var(--text-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:white;cursor:pointer}
+
+/* SIDEBAR */
+.sb{grid-area:sb;background:var(--bg-surface);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;overflow:visible;position:relative}
+.sb-toggle{position:absolute;top:16px;right:-12px;width:24px;height:24px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-tertiary);box-shadow:var(--sh-sm);z-index:10;transition:background var(--fast)}
+.sb-toggle:hover{background:var(--bg-canvas);color:var(--text-primary)}
+.sb-toggle svg{transition:transform var(--normal) var(--ease)}
+.app.col .sb-toggle svg{transform:rotate(180deg)}
+.sb-body{flex:1;overflow-y:auto;padding:16px 0}
+.sb-section{margin-bottom:20px}
+.sb-label{padding:0 16px 6px;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-tertiary)}
+.app.col .sb-label{display:none}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;font-size:13px;color:var(--text-secondary);cursor:pointer;transition:background var(--fast),color var(--fast);text-decoration:none;white-space:nowrap;overflow:hidden}
+.nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+.nav-item.active{background:var(--bg-active);color:var(--text-primary);font-weight:500}
+.nav-item.active .ni{color:var(--accent)}
+.ni{width:16px;height:16px;flex-shrink:0;color:var(--text-tertiary);display:flex;align-items:center;justify-content:center}
+.app.col .nav-item{justify-content:center;padding:8px 0}
+.app.col .nav-item span:not(.ni){display:none}
+.sb-footer{padding:12px 16px;border-top:1px solid var(--border-subtle)}
+.app.col .sb-footer{padding:12px 0}
+
+/* MAIN — chat layout */
+.main{grid-area:main;display:flex;overflow:hidden;background:var(--bg-surface)}
+
+/* THREAD LIST (left panel) */
+.thread-list{width:240px;flex-shrink:0;border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;background:var(--bg-surface)}
+.tl-header{padding:16px 16px 12px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tl-title{font-size:12px;font-weight:500;color:var(--text-primary)}
+.tl-new{display:flex;align-items:center;gap:4px;padding:5px 10px;background:var(--text-primary);color:white;border:none;border-radius:var(--r-md);font-family:var(--font-u);font-size:11px;font-weight:500;cursor:pointer;transition:opacity var(--fast)}
+.tl-new:hover{opacity:.85}
+.tl-search{padding:8px 12px;border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.tl-search-input{width:100%;height:30px;background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:var(--r-md);padding:0 10px;font-family:var(--font-u);font-size:12px;color:var(--text-primary);outline:none;transition:border-color var(--fast)}
+.tl-search-input:focus{border-color:rgba(50,238,102,.4)}
+.tl-search-input::placeholder{color:var(--text-tertiary)}
+.tl-items{flex:1;overflow-y:auto;padding:4px 0}
+.thread-item{padding:10px 16px;cursor:pointer;border-left:2px solid transparent;transition:all var(--fast)}
+.thread-item:hover{background:var(--bg-hover)}
+.thread-item.active{background:var(--bg-active);border-left-color:var(--accent)}
+.ti-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.ti-name{font-size:12px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ti-time{font-size:10px;color:var(--text-tertiary);flex-shrink:0;margin-left:6px}
+.ti-preview{font-size:11px;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ti-tags{display:flex;gap:4px;margin-top:5px}
+.ti-tag{padding:2px 6px;background:var(--bg-canvas);border-radius:4px;font-size:10px;color:var(--text-tertiary)}
+
+/* CHAT AREA */
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-header{padding:14px 24px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg-surface)}
+.chat-title{font-size:14px;font-weight:500;color:var(--text-primary)}
+.chat-meta{font-size:11px;color:var(--text-tertiary)}
+.chat-actions{display:flex;gap:6px}
+
+/* CONTEXT RIBBON */
+.ctx-ribbon{display:flex;align-items:center;gap:8px;padding:8px 24px;background:var(--bg-canvas);border-bottom:1px solid var(--border-subtle);overflow-x:auto;flex-shrink:0}
+.ctx-chip{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:20px;font-size:11px;color:var(--text-secondary);white-space:nowrap;cursor:pointer;transition:all var(--fast)}
+.ctx-chip:hover{border-color:var(--border-accent);color:var(--text-primary)}
+.ctx-chip-dot{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.ctx-add{color:var(--text-tertiary);font-size:18px;line-height:1;padding:0 4px;cursor:pointer;transition:color var(--fast)}
+.ctx-add:hover{color:var(--text-primary)}
+
+/* MESSAGES */
+.messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.msg{display:flex;gap:12px;align-items:flex-start;animation:fadeUp var(--normal) var(--ease) both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg.user{flex-direction:row-reverse}
+.msg-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500}
+.msg.ai .msg-avatar{background:var(--text-primary);color:white}
+.msg.user .msg-avatar{background:var(--accent);color:var(--text-primary)}
+.msg-body{max-width:72%}
+.msg-name{font-size:10px;font-weight:500;letter-spacing:.04em;color:var(--text-tertiary);margin-bottom:4px}
+.msg.user .msg-name{text-align:right}
+.msg-bubble{background:var(--bg-canvas);border:1px solid var(--border-subtle);border-radius:var(--r-lg);padding:12px 16px;font-size:13px;line-height:1.6;color:var(--text-primary)}
+.msg.user .msg-bubble{background:var(--text-primary);border-color:var(--text-primary);color:white;border-radius:var(--r-lg) var(--r-lg) var(--r-sm) var(--r-lg)}
+.msg.ai .msg-bubble{border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-lg)}
+.msg-time{font-size:10px;color:var(--text-tertiary);margin-top:5px}
+.msg.user .msg-time{text-align:right}
+
+/* OUTPUT CARD inside chat */
+.output-card{margin-top:12px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--r-lg);overflow:hidden}
+.oc-header{padding:10px 14px;background:var(--bg-canvas);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between}
+.oc-label{font-size:11px;font-weight:500;color:var(--text-secondary)}
+.oc-actions{display:flex;gap:6px}
+.oc-btn{padding:3px 8px;background:none;border:1px solid var(--border-default);border-radius:var(--r-sm);font-family:var(--font-u);font-size:10px;color:var(--text-secondary);cursor:pointer;transition:all var(--fast)}
+.oc-btn:hover{border-color:var(--border-accent);color:var(--text-primary)}
+.oc-body{padding:14px}
+.variant{padding:10px 14px;border:1px solid var(--border-subtle);border-radius:var(--r-md);margin-bottom:8px;cursor:pointer;transition:all var(--fast);position:relative}
+.variant:last-child{margin-bottom:0}
+.variant:hover{border-color:var(--border-accent);background:var(--accent-glow)}
+.variant.selected{border-color:var(--accent);background:var(--accent-glow)}
+.variant-label{font-size:10px;font-weight:500;letter-spacing:.04em;color:var(--text-tertiary);margin-bottom:4px}
+.variant-text{font-size:13px;color:var(--text-primary);line-height:1.5}
+.variant-sel-mark{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;background:var(--accent);border-radius:50%;display:none;align-items:center;justify-content:center}
+.variant.selected .variant-sel-mark{display:flex}
+
+/* SUGGESTIONS */
+.suggestions{display:flex;gap:8px;padding:0 24px 12px;flex-wrap:wrap;flex-shrink:0}
+.sug-btn{padding:7px 14px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:20px;font-family:var(--font-u);font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all var(--fast);white-space:nowrap}
+.sug-btn:hover{border-color:var(--border-accent);color:var(--text-primary);background:var(--accent-glow)}
+
+/* COMPOSER */
+.composer{padding:12px 24px 16px;border-top:1px solid var(--border-subtle);flex-shrink:0;background:var(--bg-surface)}
+.composer-inner{display:flex;align-items:flex-end;gap:10px;background:var(--bg-canvas);border:1px solid var(--border-default);border-radius:var(--r-xl);padding:8px 12px;transition:border-color var(--fast),box-shadow var(--fast)}
+.composer-inner:focus-within{border-color:rgba(50,238,102,.4);box-shadow:0 0 0 3px rgba(50,238,102,.08)}
+.composer-textarea{flex:1;background:none;border:none;font-family:var(--font-u);font-size:13px;color:var(--text-primary);resize:none;outline:none;line-height:1.5;max-height:120px;overflow-y:auto}
+.composer-textarea::placeholder{color:var(--text-tertiary)}
+.composer-tools{display:flex;align-items:center;gap:6px}
+.c-tool{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:var(--text-tertiary);border-radius:var(--r-md);transition:all var(--fast)}
+.c-tool:hover{background:var(--bg-surface);color:var(--text-primary)}
+.c-send{width:32px;height:32px;background:var(--text-primary);border:none;border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;transition:opacity var(--fast),transform var(--fast);flex-shrink:0}
+.c-send:hover{opacity:.85}
+.c-send:active{transform:scale(.95)}
+
+/* TYPING INDICATOR */
+.typing-dots{display:flex;gap:4px;align-items:center;padding:4px 0}
+.typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--text-tertiary);animation:bounce .9s ease infinite}
+.typing-dots span:nth-child(2){animation-delay:.15s}
+.typing-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- TOPBAR -->
+  <header class="tb">
+    <div class="tb-logo">
+      <a href="./library.html" style="display:flex;align-items:center;line-height:0"><img src="./assets/logo-wordmark-gradient.svg" alt="tropicOS" height="22"></a>
+    </div>
+    <div class="tb-ctx">
+      <nav class="bc">
+        <a href="./library.html">Library</a>
+        <span class="bc-sep">·</span>
+        <a href="./workflow.html">Campaign OS</a>
+        <span class="bc-sep">·</span>
+        <span class="bc-cur">Writers Studio</span>
+      </nav>
+      <div class="tb-badge">
+        <span class="tb-badge-dot"></span>
+        Criativo · Claude
+      </div>
+    </div>
+    <div class="tb-right">
+      <button class="ib" title="Notificações">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a4.5 4.5 0 0 0-4.5 4.5v2L2 10v.5h12V10l-1.5-1.5v-2A4.5 4.5 0 0 0 8 2ZM6.5 12a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="ib" title="Config">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M12.6 3.4l-.85.85M4.25 11.75l-.85.85" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="av">FS</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sb">
+    <button class="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+        <div class="sb-body">
+      <div class="sb-section">
+        <a class="nav-item" href="./library.html?filter=strategy">
+          <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l3-3 2.5 2.5 4-5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span>Strategy</span>
+        </a>
+        <a class="nav-item" href="./library.html?filter=creative">
+          <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11C4 9 4 7 7 6.5s2.5-2.5 4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M2 2.5C4 4.5 4 6.5 7 7s2.5 2.5 4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+          <span>Creative</span>
+        </a>
+        <a class="nav-item" href="./library.html?filter=content">
+          <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10.5l1-2.5L9 2l2 2-6 6.5-3 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7.5 3.5l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+          <span>Content</span>
+        </a>
+      </div>
+      <div class="sb-section" style="border-top:1px solid var(--border-subtle);padding-top:8px;margin-top:4px">
+        <a class="nav-item" href="#">
+          <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 3A1.5 1.5 0 014 1.5h3.5a1 1 0 01.7.3l3 3a1 1 0 01.3.7V11A1.5 1.5 0 0110 12.5H4A1.5 1.5 0 012.5 11V3z" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.5v3a.5.5 0 00.5.5H11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+          <span>My Files</span>
+        </a>
+      </div>
+    </div>
+    <div class="sb-footer">
+      <a class="nav-item" href="#">
+        <span class="ni"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3.5l2 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+        <span>Configuração</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- THREAD LIST -->
+    <div class="thread-list">
+      <div class="tl-header">
+        <span class="tl-title">Conversas</span>
+        <button class="tl-new" onclick="newThread()">+ Nova</button>
+      </div>
+      <div class="tl-search">
+        <input type="text" class="tl-search-input" placeholder="Buscar…">
+      </div>
+      <div class="tl-items" id="thread-items">
+        <div class="thread-item active" onclick="selectThread(this,0)">
+          <div class="ti-meta">
+            <span class="ti-name">Nike Air Max 2025</span>
+            <span class="ti-time">14:32</span>
+          </div>
+          <div class="ti-preview">Escreva 3 variações de headline…</div>
+          <div class="ti-tags">
+            <span class="ti-tag">headline</span>
+            <span class="ti-tag">30s</span>
+          </div>
+        </div>
+        <div class="thread-item" onclick="selectThread(this,1)">
+          <div class="ti-meta">
+            <span class="ti-name">Itaú · Campanha Verão</span>
+            <span class="ti-time">ontem</span>
+          </div>
+          <div class="ti-preview">Preciso de um manifesto para…</div>
+          <div class="ti-tags">
+            <span class="ti-tag">manifesto</span>
+          </div>
+        </div>
+        <div class="thread-item" onclick="selectThread(this,2)">
+          <div class="ti-meta">
+            <span class="ti-name">Havaianas · Verão 26</span>
+            <span class="ti-time">seg</span>
+          </div>
+          <div class="ti-preview">Tagline para comunicação global…</div>
+          <div class="ti-tags">
+            <span class="ti-tag">tagline</span>
+            <span class="ti-tag">global</span>
+          </div>
+        </div>
+        <div class="thread-item" onclick="selectThread(this,3)">
+          <div class="ti-meta">
+            <span class="ti-name">Bradesco · Investimentos</span>
+            <span class="ti-time">qui</span>
+          </div>
+          <div class="ti-preview">OOH 6s + social copy…</div>
+          <div class="ti-tags">
+            <span class="ti-tag">OOH</span>
+            <span class="ti-tag">social</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area">
+      <div class="chat-header">
+        <div>
+          <div class="chat-title" id="chat-title">Nike Air Max 2025</div>
+          <div class="chat-meta" id="chat-meta">Campanha de lançamento · 5 mensagens</div>
+        </div>
+        <div class="chat-actions">
+          <button class="ib" title="Exportar conversa">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 9.5v2h9v-2M7 2v7M4.5 6.5L7 9l2.5-2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="ib" title="Histórico">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M2 7h7M2 10.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTEXT RIBBON -->
+      <div class="ctx-ribbon">
+        <span style="font-size:10px;font-weight:500;letter-spacing:.04em;color:var(--text-tertiary);flex-shrink:0;text-transform:uppercase">Contexto</span>
+        <div class="ctx-chip"><span class="ctx-chip-dot"></span>Brief da Nike</div>
+        <div class="ctx-chip"><span class="ctx-chip-dot"></span>Arco narrativo · Transformação</div>
+        <div class="ctx-chip"><span class="ctx-chip-dot"></span>Persona · Lucas 22a</div>
+        <div class="ctx-add" title="Adicionar contexto">+</div>
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="messages" id="messages">
+
+        <div class="msg ai">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-body">
+            <div class="msg-name">Writers Studio</div>
+            <div class="msg-bubble">
+              Olá! Estou conectado ao brief da campanha Nike Air Max 2025 e ao arco narrativo de Transformação gerado pelo Story Arc Engine.<br><br>
+              O que você precisa escrever? Posso criar <strong>headlines, manifesto, OOH copy, social hooks, roteiro de filme</strong> ou qualquer outro formato.
+            </div>
+            <div class="msg-time">14:28</div>
+          </div>
+        </div>
+
+        <div class="msg user">
+          <div class="msg-avatar">FS</div>
+          <div class="msg-body">
+            <div class="msg-name">Fabio</div>
+            <div class="msg-bubble">Escreva 3 variações de headline para o filme de 30s. Tom: inspirador, direto. Foco na tensão identidade vs conformidade.</div>
+            <div class="msg-time">14:30</div>
+          </div>
+        </div>
+
+        <div class="msg ai">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-body">
+            <div class="msg-name">Writers Studio</div>
+            <div class="msg-bubble">
+              Aqui estão 3 variações de headline, cada uma explorando um ângulo diferente da tensão identidade vs. conformidade:
+              <div class="output-card">
+                <div class="oc-header">
+                  <span class="oc-label">Headline · Filme 30s · 3 variações</span>
+                  <div class="oc-actions">
+                    <button class="oc-btn" onclick="copyVariants()">Copiar</button>
+                    <button class="oc-btn">Exportar</button>
+                  </div>
+                </div>
+                <div class="oc-body">
+                  <div class="variant" onclick="selectVariant(this)">
+                    <div class="variant-label">Variação A · Direto · Afirmação</div>
+                    <div class="variant-text">"Pare de imitar. Comece a ser."</div>
+                    <div class="variant-sel-mark"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.2 5.8L6.5 2.2" stroke="#111" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                  </div>
+                  <div class="variant" onclick="selectVariant(this)">
+                    <div class="variant-label">Variação B · Provocador · Pergunta</div>
+                    <div class="variant-text">"Quando foi a última vez que você escolheu você?"</div>
+                    <div class="variant-sel-mark"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.2 5.8L6.5 2.2" stroke="#111" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                  </div>
+                  <div class="variant" onclick="selectVariant(this)">
+                    <div class="variant-label">Variação C · Inspirador · Manifesto</div>
+                    <div class="variant-text">"Cada passo é uma declaração. Air Max 2025."</div>
+                    <div class="variant-sel-mark"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.2 5.8L6.5 2.2" stroke="#111" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="msg-time">14:32</div>
+          </div>
+        </div>
+
+        <div class="msg user">
+          <div class="msg-avatar">FS</div>
+          <div class="msg-body">
+            <div class="msg-name">Fabio</div>
+            <div class="msg-bubble">Gostei da A. Expanda em 3 versões diferentes — uma para OOH 6s, uma para abertura do filme, uma para o encerramento.</div>
+            <div class="msg-time">14:38</div>
+          </div>
+        </div>
+
+        <div class="msg ai" id="last-ai-msg">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-body">
+            <div class="msg-name">Writers Studio</div>
+            <div class="msg-bubble">
+              Expandindo "Pare de imitar. Comece a ser." para os 3 formatos:
+              <div class="output-card">
+                <div class="oc-header">
+                  <span class="oc-label">Copy · 3 formatos · Baseado na variação A</span>
+                  <div class="oc-actions">
+                    <button class="oc-btn" onclick="copyVariants()">Copiar</button>
+                    <button class="oc-btn">Exportar</button>
+                  </div>
+                </div>
+                <div class="oc-body">
+                  <div class="variant" onclick="selectVariant(this)">
+                    <div class="variant-label">OOH · 6 segundos</div>
+                    <div class="variant-text">"Pare de imitar."<br><span style="color:var(--text-tertiary);font-size:12px">Corte. Silêncio. Logo.</span></div>
+                    <div class="variant-sel-mark"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.2 5.8L6.5 2.2" stroke="#111" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                  </div>
+                  <div class="variant" onclick="selectVariant(this)">
+                    <div class="variant-label">Abertura do filme · 0–3s</div>
+                    <div class="variant-text">"Todo dia o mesmo tênis. O mesmo caminho. O mesmo você?"</div>
+                    <div class="variant-sel-mark"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.2 5.8L6.5 2.2" stroke="#111" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                  </div>
+                  <div class="variant" onclick="selectVariant(this)">
+                    <div class="variant-label">Encerramento · 27–30s</div>
+                    <div class="variant-text">"Comece a ser. Air Max 2025."</div>
+                    <div class="variant-sel-mark"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.2 5.8L6.5 2.2" stroke="#111" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="msg-time">14:40</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SUGGESTIONS -->
+      <div class="suggestions" id="suggestions">
+        <button class="sug-btn" onclick="sendSuggestion(this)">Escrever versão social (15s)</button>
+        <button class="sug-btn" onclick="sendSuggestion(this)">Variar o tom — mais provocador</button>
+        <button class="sug-btn" onclick="sendSuggestion(this)">Adicionar manifesto completo</button>
+        <button class="sug-btn" onclick="sendSuggestion(this)">Exportar para brief</button>
+      </div>
+
+      <!-- COMPOSER -->
+      <div class="composer">
+        <div class="composer-inner">
+          <div class="composer-tools" style="align-self:flex-end;padding-bottom:4px">
+            <button class="c-tool" title="Anexar contexto">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 7l-5 5a3 3 0 0 1-4.24-4.24l5.66-5.66A2 2 0 1 1 10.24 4.9L4.58 10.58a1 1 0 1 1-1.42-1.42L8.5 3.83" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="c-tool" title="Templates">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 5.5h11M5.5 5.5v7" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+          </div>
+          <textarea class="composer-textarea" id="composer-input" rows="1" placeholder="Escreva uma instrução… Ex: Crie uma versão para stories vertical" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="c-send" onclick="sendMessage()" id="send-btn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7L2 2l2.5 5L2 12l10-5z" fill="white"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function toggleSidebar(){
+  document.getElementById('app').classList.toggle('col');
+}
+
+function selectThread(el, idx){
+  document.querySelectorAll('.thread-item').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const titles = ['Nike Air Max 2025','Itaú · Campanha Verão','Havaianas · Verão 26','Bradesco · Investimentos'];
+  document.getElementById('chat-title').textContent = titles[idx];
+}
+
+function selectVariant(el){
+  const card = el.closest('.oc-body');
+  card.querySelectorAll('.variant').forEach(v=>v.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e){
+  if(e.key==='Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function sendSuggestion(el){
+  const input = document.getElementById('composer-input');
+  input.value = el.textContent;
+  sendMessage();
+}
+
+function sendMessage(){
+  const input = document.getElementById('composer-input');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value='';
+  input.style.height='';
+  appendUserMsg(text);
+  setTimeout(()=>showTyping(), 400);
+  setTimeout(()=>appendAIResponse(text), 2000);
+}
+
+function appendUserMsg(text){
+  const msgs = document.getElementById('messages');
+  const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const div = document.createElement('div');
+  div.className='msg user';
+  div.innerHTML=`
+    <div class="msg-avatar">FS</div>
+    <div class="msg-body">
+      <div class="msg-name">Fabio</div>
+      <div class="msg-bubble">${text}</div>
+      <div class="msg-time">${now}</div>
+    </div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+let typingEl = null;
+function showTyping(){
+  const msgs = document.getElementById('messages');
+  typingEl = document.createElement('div');
+  typingEl.className = 'msg ai';
+  typingEl.id = 'typing-indicator';
+  typingEl.innerHTML=`
+    <div class="msg-avatar">AI</div>
+    <div class="msg-body">
+      <div class="msg-name">Writers Studio</div>
+      <div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>
+    </div>
+  `;
+  msgs.appendChild(typingEl);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+const REPLIES = [
+  'Aqui está a versão adaptada. O tom mantém a essência da variação A com a cadência ajustada para o novo formato.',
+  'Entendido. Aqui estão as variações com o tom mais provocador — mais agressividade na tensão, menos resolução suave.',
+  'Manifesto completo gerado com base no arco narrativo de transformação. 5 parágrafos, do problema à declaração de identidade.',
+  'Exportando para o brief do Campaign OS. O copy selecionado será vinculado automaticamente ao contexto da campanha.'
+];
+
+let replyIdx = 0;
+function appendAIResponse(prompt){
+  const indicator = document.getElementById('typing-indicator');
+  if(indicator) indicator.remove();
+  const msgs = document.getElementById('messages');
+  const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const div = document.createElement('div');
+  div.className='msg ai';
+  div.innerHTML=`
+    <div class="msg-avatar">AI</div>
+    <div class="msg-body">
+      <div class="msg-name">Writers Studio</div>
+      <div class="msg-bubble">${REPLIES[replyIdx % REPLIES.length]}</div>
+      <div class="msg-time">${now}</div>
+    </div>
+  `;
+  replyIdx++;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function newThread(){
+  const items = document.getElementById('thread-items');
+  const div = document.createElement('div');
+  div.className='thread-item active';
+  div.onclick = function(){ selectThread(div, 99); };
+  div.innerHTML=`
+    <div class="ti-meta">
+      <span class="ti-name">Nova conversa</span>
+      <span class="ti-time">agora</span>
+    </div>
+    <div class="ti-preview">Sem mensagens ainda</div>
+  `;
+  document.querySelectorAll('.thread-item').forEach(t=>t.classList.remove('active'));
+  items.prepend(div);
+}
+
+function copyVariants(){
+  const copy = 'Variação A: "Pare de imitar. Comece a ser."\nVariação B: "Quando foi a última vez que você escolheu você?"\nVariação C: "Cada passo é uma declaração. Air Max 2025."';
+  navigator.clipboard.writeText(copy).catch(()=>{});
+}
+</script>
+</body>
+</html>

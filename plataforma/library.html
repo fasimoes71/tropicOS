@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tropicOS — Library</title>
+<style>
+
+@font-face {
+  font-family: 'PPFragment';
+  src: url('./fonts/PPFragment-SerifLight.woff') format('woff');
+  font-weight: 300; font-display: swap;
+}
+@font-face {
+  font-family: 'PPFragment';
+  src: url('./fonts/PPFragment-SerifRegular.otf') format('opentype');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Ekstra';
+  src: url('./fonts/Ekstra-Regular.otf') format('opentype');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Ekstra';
+  src: url('./fonts/Ekstra-Medium.otf') format('opentype');
+  font-weight: 500; font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-canvas:        #ffffff;
+  --bg-surface:       #ffffff;
+  --bg-surface-hover: #f7f7f7;
+  --bg-active:        #fafffd;
+  --border-subtle:    #e8e8e8;
+  --border-default:   #d9d9d9;
+  --border-accent:    rgba(50,238,102,0.35);
+  --text-primary:     #111111;
+  --text-secondary:   #555555;
+  --text-tertiary:    #999999;
+  --accent:           #32EE66;
+  --font-editorial:   'PPFragment', Georgia, serif;
+  --font-ui:          'Ekstra', system-ui, sans-serif;
+  --topbar-h:         52px;
+  --sidebar-w:        185px;
+  --sidebar-w-sm:     52px;
+  --shadow-sm:        0 1px 4px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:        0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --ease: cubic-bezier(0.2,0,0,1);
+  --fast: 140ms;
+  --normal: 220ms;
+}
+
+/* Dark Mode */
+:root.dark-mode {
+  --bg-canvas:        #1f1f1f;
+  --bg-surface:       #1f1f1f;
+  --bg-surface-hover: #1f1f1f;
+  --bg-active:        #1f1f1f;
+  --border-subtle:    #3a3a3a;
+  --border-default:   #4a4a4a;
+  --border-accent:    rgba(50,238,102,0.25);
+  --text-primary:     #f0f0f0;
+  --text-secondary:   #a8a8a8;
+  --text-tertiary:    #767676;
+}
+
+@media (prefers-reduced-motion: reduce) { :root { --fast:0ms; --normal:0ms; } }
+
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font-ui); font-size: 14px; background: var(--bg-canvas); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: none; box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent); }
+
+/* ── APP SHELL ── */
+.app {
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-areas: "topbar topbar" "sidebar main";
+  height: 100vh;
+  transition: grid-template-columns var(--normal) var(--ease);
+}
+.app.collapsed { grid-template-columns: 48px 1fr; }
+
+/* ── TOP BAR ── */
+.topbar {
+  grid-area: topbar;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center;
+  padding: 0 20px 0 0;
+  z-index: 200; position: relative;
+}
+.topbar-logo {
+  width: var(--sidebar-w); flex-shrink: 0;
+  display: flex; align-items: center; padding: 0 20px; gap: 10px;
+  height: 100%;
+  transition: width var(--normal) var(--ease);
+}
+.app.collapsed .topbar-logo { width: var(--sidebar-w-sm); padding: 0; justify-content: center; }
+
+.topbar-logo img { transition: opacity var(--fast) var(--ease), max-width var(--normal) var(--ease); }
+.app.collapsed .topbar-logo img { opacity: 0; max-width: 0; pointer-events: none; }
+
+.topbar-context { flex: 1; display: flex; align-items: center; padding: 0 32px; gap: 32px; min-width: 0; }
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-tertiary); }
+.breadcrumb-sep { color: var(--border-default); }
+.breadcrumb-current { color: var(--text-primary); font-weight: 500; }
+
+.topbar-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-canvas); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: 7px 12px;
+  font-family: var(--font-ui); font-size: 12px; color: var(--text-tertiary);
+  cursor: text; min-width: 200px; transition: border-color var(--fast);
+}
+.topbar-search:hover { border-color: var(--border-default); }
+.topbar-search kbd { margin-left: auto; font-size: 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 1px 5px; color: var(--text-tertiary); font-family: var(--font-ui); }
+
+.topbar-right { display: flex; align-items: center; gap: 8px; padding-left: 16px; }
+.icon-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: none; border-radius: var(--radius-md); cursor: pointer; color: var(--text-tertiary); transition: background var(--fast), color var(--fast); position: relative; }
+.icon-btn:hover { background: var(--bg-canvas); color: var(--text-primary); }
+.icon-btn[data-tooltip]:hover::after { content: attr(data-tooltip); position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); background: var(--text-primary); color: var(--bg-canvas); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; white-space: nowrap; z-index: 1000; pointer-events: none; }
+
+/* Dark Mode Toggle Switch */
+.dark-mode-toggle { 
+  width: 48px; height: 28px; 
+  background: #d0d0d0; border: none; border-radius: 99px; 
+  cursor: pointer; transition: all var(--normal); 
+  user-select: none; position: relative; padding: 0; 
+  display: flex; align-items: center; padding: 2px;
+}
+.dark-mode-toggle:hover { background: #c0c0c0; }
+.dark-mode-toggle.active { background: #3a3a3a; }
+.dark-mode-toggle.active:hover { background: #4a4a4a; }
+
+.toggle-dot { 
+  width: 24px; height: 24px; 
+  background: white; border-radius: 50%; 
+  display: flex; align-items: center; justify-content: center; 
+  transition: all var(--normal); 
+  color: #666666; font-size: 12px;
+  position: absolute; left: 2px;
+}
+.dark-mode-toggle.active .toggle-dot {
+  background: #5a5a5a;
+  left: calc(100% - 26px);
+  color: #e0e0e0;
+}
+.dark-mode-toggle .sun-icon { display: block; }
+.dark-mode-toggle .moon-icon { display: none; }
+.dark-mode-toggle.active .sun-icon { display: none; }
+.dark-mode-toggle.active .moon-icon { display: block; }
+.avatar { width: 28px; height: 28px; background: var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: var(--bg-canvas); cursor: pointer; letter-spacing: 0.02em; }
+
+/* ── SIDEBAR ── */
+.sidebar { grid-area: sidebar; background: var(--bg-surface); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; overflow: visible; position: relative; }
+.sidebar-toggle { position: absolute; top: 16px; right: -12px; width: 24px; height: 24px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-tertiary); box-shadow: var(--shadow-sm); z-index: 10; transition: background var(--fast); }
+.sidebar-toggle:hover { background: var(--bg-canvas); color: var(--text-primary); }
+.sidebar-toggle svg { transition: transform var(--normal) var(--ease); }
+.app.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+
+.sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px 0; scrollbar-width: thin; scrollbar-color: var(--border-default) transparent; }
+.nav-section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); padding: 8px 16px 4px; white-space: nowrap; overflow: hidden; transition: opacity var(--fast); }
+.app.collapsed .nav-section-label { opacity: 0; pointer-events: none; }
+
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin: 4px 8px; border-radius: var(--radius-md); cursor: pointer; color: var(--text-secondary); font-size: 13px; font-weight: 400; text-decoration: none; transition: background var(--fast), color var(--fast); min-height: 40px; position: relative; user-select: none; }
+.nav-item:hover { background: var(--bg-canvas); color: var(--text-primary); }
+.nav-item.active { background: var(--bg-active); color: var(--text-primary); font-weight: 500; }
+.nav-item.active::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 16px; background: var(--accent); border-radius: 0 2px 2px 0; margin-left: -6px; }
+.nav-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; opacity: 0.5; transition: opacity var(--fast); }
+.nav-item:hover .nav-icon, .nav-item.active .nav-icon { opacity: 1; }
+.nav-label { flex: 1; overflow: hidden; text-overflow: ellipsis; transition: opacity var(--fast); }
+.app.collapsed .nav-label { opacity: 0; width: 0; pointer-events: none; }
+.nav-badge { font-size: 10px; font-weight: 500; background: var(--accent); color: #0f0f0f; border-radius: 10px; padding: 1px 7px; line-height: 1.6; transition: opacity var(--fast); }
+.app.collapsed .nav-badge { opacity: 0; }
+.nav-divider { height: 1px; background: var(--border-subtle); margin: 12px 16px; }
+.sidebar-footer { padding: 12px 0; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; }
+[data-tooltip]::after { content: attr(data-tooltip); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); background: var(--text-primary); color: white; font-size: 11px; white-space: nowrap; padding: 5px 10px; border-radius: var(--radius-sm); pointer-events: none; opacity: 0; transition: opacity var(--fast); z-index: 300; font-family: var(--font-ui); }
+.app.collapsed [data-tooltip]:hover::after { opacity: 1; }
+
+/* ── MAIN ── */
+.main { grid-area: main; overflow-y: auto; overflow-x: hidden; background: var(--bg-canvas); padding: 20px 48px 0 48px; }
+
+/* ── LIBRARY LAYOUT ── */
+.library { padding: 20px 48px 80px; }
+
+/* Page header */
+.lib-header {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 40px;
+}
+.lib-title { font-family: var(--font-editorial); font-weight: 300; font-size: clamp(2rem,3.5vw,3rem); letter-spacing: -0.02em; line-height: 1.05; }
+.lib-filters { display: flex; gap: 6px; }
+.filter-pill {
+  font-size: 12px; font-weight: 400; padding: 6px 14px;
+  border: 1px solid var(--border-default); border-radius: 99px;
+  background: var(--bg-surface); color: var(--text-secondary);
+  cursor: pointer; transition: all var(--fast);
+}
+.filter-pill:hover { border-color: var(--text-primary); color: var(--text-primary); }
+.filter-pill.active { background: var(--text-primary); color: white; border-color: var(--text-primary); }
+
+/* Section */
+.lib-section { margin-bottom: 56px; }
+.lib-section-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 28px;
+}
+.lib-section-title { font-family: var(--font-editorial); font-weight: 300; font-size: 3rem; letter-spacing: -0.03em; line-height: 1; color: var(--text-primary); }
+.lib-section-title-highlight { color: var(--accent); font-weight: 300; }
+.lib-section-link { font-size: 12px; color: var(--text-tertiary); text-decoration: none; transition: color var(--fast); cursor: pointer; }
+.lib-section-link:hover { color: var(--text-primary); }
+
+.lib-section-description { font-family: var(--font-editorial); font-size: 1.125rem; font-weight: 300; color: var(--text-secondary); line-height: 1.4; max-width: 680px; margin-bottom: 32px; margin-top: -16px; letter-spacing: -0.01em; }
+
+/* ── FEATURED ROW (horizontal scroll) ── */
+.featured-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* ── TOOL CARD (with thumbnail) ── */
+.tool-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow var(--fast), transform var(--fast), border-color var(--fast);
+  box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column;
+}
+.tool-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-default); }
+.tool-card:focus-visible { outline: none; box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent); }
+
+/* Thumbnail */
+.card-thumb {
+  width: 100%; aspect-ratio: 16/9;
+  position: relative; overflow: hidden;
+  flex-shrink: 0;
+}
+.card-thumb-inner {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+
+/* Thumbnail visual styles per tool */
+.thumb-moodboard { background: #1a1a1a; }
+.thumb-moodboard-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 16px; width: 100%; height: 100%; }
+.thumb-moodboard-inner div { border-radius: 4px; }
+
+.thumb-strategy { background: #0d0d0d; }
+.thumb-personas { background: #f5f0eb; }
+.thumb-story { background: #ffffff; border-bottom: 1px solid var(--border-subtle); }
+.thumb-illustration { background: #f8f8f8; border-bottom: 1px solid var(--border-subtle); }
+.thumb-visual { background: #1c1c1c; }
+.thumb-writers { background: #fafafa; border-bottom: 1px solid var(--border-subtle); }
+.thumb-logo { background: #e8e4dc; }
+.thumb-packshots { background: #f2f0ec; }
+.thumb-insights { background: #0a0a0a; }
+.thumb-journey { background: #f5f5f5; border-bottom: 1px solid var(--border-subtle); }
+.thumb-campaign { background: linear-gradient(135deg, #0f0f0f 0%, #1a2a1e 100%); }
+
+/* Card body */
+.card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 4px; min-height: 80px; }
+.card-badge-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.card-badge {
+  font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-tertiary); background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle); border-radius: 99px; padding: 2px 8px;
+}
+.card-badge.new { background: var(--accent); color: #0f0f0f; border-color: var(--accent); }
+
+.card-name { font-size: 13px; font-weight: 500; color: var(--text-primary); line-height: 1.3; }
+.card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.55; flex: 1; overflow-wrap: break-word; word-break: break-word; }
+
+/* ── AGENT GRID (text-only cards) ── */
+.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 10px; }
+
+.agent-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 18px 18px 16px;
+  cursor: pointer;
+  transition: box-shadow var(--fast), border-color var(--fast);
+  box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.agent-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-default); }
+
+.agent-num { font-size: 10px; font-weight: 500; letter-spacing: 0.06em; color: var(--text-tertiary); }
+.agent-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.agent-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.55; }
+
+/* ── COMBO CARD ── */
+.combo-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow var(--fast), border-color var(--fast);
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: stretch;
+}
+.combo-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-default); }
+
+.combo-thumb {
+  width: 200px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.combo-body { flex: 1; padding: 20px 22px; display: flex; flex-direction: column; gap: 6px; justify-content: center; }
+.combo-tag { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.combo-name { font-family: var(--font-editorial); font-weight: 400; font-size: 1.125rem; color: var(--text-primary); letter-spacing: -0.01em; }
+.combo-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; max-width: 420px; }
+.combo-phases { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.combo-phase { font-size: 10px; padding: 2px 10px; background: var(--bg-canvas); border: 1px solid var(--border-subtle); border-radius: 99px; color: var(--text-tertiary); }
+
+/* ── FILES GRID ── */
+.files-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 10px; }
+.file-card {
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;
+  transition: box-shadow var(--fast), border-color var(--fast);
+  box-shadow: var(--shadow-sm);
+}
+.file-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-default); }
+.file-thumb { width: 100%; aspect-ratio: 4/3; overflow: hidden; }
+.file-meta { padding: 10px 12px; }
+.file-name { font-size: 12px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-sub { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+
+/* ── EMPTY FILE CARD ── */
+.file-card.empty .file-thumb { background: var(--bg-canvas); display: flex; align-items: center; justify-content: center; }
+.file-card.empty .file-thumb svg { opacity: 0.2; }
+
+/* ── MULTI-VIEW STATES (Home, Tools, About) ── */
+.app {
+  grid-template-areas: "topbar topbar" "sidebar main";
+}
+  grid-template-columns: 1fr;
+  grid-template-areas: "topbar" "focus-shell";
+}
+
+
+/* View visibility */
+
+
+
+
+  grid-template-columns: 240px 1fr;
+}
+
+/* ── FOCUS TOPBAR ── */
+#topbar-focus {
+  grid-area: topbar;
+  height: var(--topbar-h);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  z-index: 200;
+}
+
+#drawer-toggle {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#topbar-focus-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#back-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── FOCUS DRAWER ── */
+  grid-area: drawer;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform var(--normal) var(--ease);
+}
+
+.focus-drawer-header {
+  padding: 0 0 8px 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 8px;
+}
+
+.focus-drawer-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: none;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all var(--fast);
+  text-align: left;
+  font-family: var(--font-ui);
+}
+
+.focus-drawer-item:hover {
+  background: var(--bg-canvas);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.focus-drawer-item.active {
+  background: var(--accent);
+  color: #0f0f0f;
+  border-color: var(--accent);
+  font-weight: 500;
+}
+
+/* ── FOCUS CANVAS ── */
+  grid-area: canvas;
+  overflow: hidden;
+  background: var(--bg-canvas);
+}
+
+#tool-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* ── HOME VIEW STYLING ── */
+  padding: 60px 48px;
+  max-width: 900px;
+}
+
+.home-hero {
+  margin-bottom: 80px;
+}
+
+.home-hero h1 {
+  font-family: var(--font-editorial);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-bottom: 24px;
+  color: var(--text-primary);
+}
+
+.home-hero p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.home-cta {
+  display: inline-flex;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--accent);
+  color: #0f0f0f;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--fast);
+}
+
+.home-cta:hover {
+  box-shadow: 0 4px 16px rgba(50, 238, 102, 0.3);
+  transform: translateY(-2px);
+}
+
+/* ── ABOUT VIEW STYLING ── */
+  padding: 60px 48px;
+  max-width: 900px;
+}
+
+.about-section {
+  margin-bottom: 48px;
+}
+
+.about-section h2 {
+  font-family: var(--font-editorial);
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.about-section p {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 768px) {
+    grid-template-columns: 0 1fr;
+  }
+  
+    grid-template-columns: 200px 1fr;
+  }
+  
+    position: fixed;
+    left: 0;
+    top: var(--topbar-h);
+    width: 200px;
+    height: calc(100% - var(--topbar-h));
+    box-shadow: var(--shadow-md);
+    z-index: 100;
+  }
+}
+
+
+.app.collapsed .sidebar-nav { padding: 12px 0; }
+.app.collapsed .nav-item { padding: 8px 0 !important; }
+.app.collapsed .nav-icon { margin: 0 auto; }
+.app.collapsed .sidebar-footer { padding: 8px 0; }
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <a href="./library.html" style="display:flex;align-items:center;line-height:0"><img src="./assets/logo-wordmark-gradient.svg" alt="tropicOS" height="29" style="display:block;max-width:182px;object-fit:contain"></a>
+    </div>
+    <div class="topbar-context">
+      <a href="#" class="nav-link" data-view-nav="home" style="text-decoration: none; color: var(--text-secondary); font-size: 13px; transition: color var(--fast);">Home</a>
+      <a href="#" class="nav-link" data-view-nav="about" style="text-decoration: none; color: var(--text-secondary); font-size: 13px; transition: color var(--fast);">About</a>
+      <a href="#" class="nav-link" data-view-nav="tools" style="text-decoration: none; color: var(--text-secondary); font-size: 13px; transition: color var(--fast);">Tools</a>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" id="lang-toggle" aria-label="Language" style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em;">PT</button>
+      <div class="dark-mode-toggle" id="dark-mode-toggle" role="switch" aria-checked="false" title="Dark Mode">
+        <div class="toggle-dot">
+          <svg class="sun-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6l1.4 1.4M13 3l-1.4 1.4M4.4 11.6l-1.4 1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          <svg class="moon-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7z" fill="currentColor"/></svg>
+        </div>
+      </div>
+      <div class="avatar">FS</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Recolher sidebar">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="sidebar-nav">
+      <a class="nav-item nav-link" href="javascript:void(0)" data-filter="strategy">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12l4-4 3 3 5-7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="nav-label" data-i18n="Estratégia">Estratégia</span>
+      </a>
+      <a class="nav-item nav-link" href="javascript:void(0)" data-filter="creative">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13C5 11 5 9 8 8s3-3 5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3 3c2 2 2 4 5 5s3 3 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        <span class="nav-label" data-i18n="Criativo">Criativo</span>
+      </a>
+      <a class="nav-item nav-link" href="javascript:void(0)" data-filter="content">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2.5 12.5l1-3L10 3l2 2-6.5 6.5-3 1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.5 4.5l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        <span class="nav-label" data-i18n="Conteúdo">Conteúdo</span>
+      </a>
+      <a class="nav-item nav-link" href="./workflow.html">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="13" cy="4" r="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="13" cy="12" r="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 8h3l3-4M7.5 8h3l2 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="nav-label" data-i18n="Fluxos">Fluxos</span>
+      </a>
+      <div class="nav-divider"></div>
+      <a class="nav-item nav-link" href="javascript:void(0)" data-filter="my-files">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3.5A1.5 1.5 0 014.5 2h4.086a1 1 0 01.707.293l3.414 3.414A1 1 0 0113 6.414V12.5A1.5 1.5 0 0111.5 14h-7A1.5 1.5 0 013 12.5v-9z" stroke="currentColor" stroke-width="1.3"/><path d="M9 2v3.5a.5.5 0 00.5.5H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        <span class="nav-label" data-i18n="Meus Arquivos">Meus Arquivos</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <a class="nav-item" href="#" data-tooltip="Configuração"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span><span class="nav-label" data-i18n="Configuração">Configuração</span></a>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+    <!-- VIEW: HOME -->
+      <div class="home-hero">
+        <h1>Bem-vindo ao <span style="color: var(--accent);">tropicOS</span></h1>
+        <p>A plataforma criativa que transforma dados em narrativas impactantes. Combine estratégia, criatividade e execução em um único ambiente.</p>
+        <button class="home-cta" onclick="showView('tools')">Explorar Ferramentas →</button>
+      </div>
+      <div class="about-section">
+        <h2>O que é tropicOS?</h2>
+        <p>tropicOS é um sistema integrado de ferramentas criativas projetadas para equipes que querem transformar estratégia em criação. Cada ferramenta foi construída para trabalhar em harmonia, conectando insights estratégicos a execução criativa real.</p>
+      </div>
+
+    <!-- VIEW: TOOLS -->
+
+    <!-- STRATEGY SECTION -->
+    <div class="lib-section">
+      <div class="lib-section-header">
+        <h2 class="lib-section-title"><span class="lib-section-title-highlight" data-i18n="Estratégia:">Estratégia:</span> <span data-i18n="Transformando cultura em oportunidade.">Transformando cultura em oportunidade.</span></h2>
+      </div>
+      <p class="lib-section-description" data-i18n="Descubra novos territórios estratégicos transformando dados frios em narrativas que criam impacto real.">Descubra novos territórios estratégicos transformando dados frios em narrativas que criam impacto real.</p>
+      <div class="featured-row">
+        <!-- Project Mapping -->
+        <div class="tool-card" tabindex="0" role="button" data-category="strategy" data-url="../creative-workflow/?skill=project-mapping" data-skill="project-mapping">
+          <div class="card-thumb"><img src="./assets/project-mapping.png" alt="Project Mapping" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Strategy">Strategy</span></div>
+            <div class="card-name" data-i18n="Project Mapping">Project Mapping</div>
+            <div class="card-desc" data-i18n="Consolida inputs em mapa estratégico, revela contradições e oportunidades.">Consolida inputs em mapa estratégico, revela contradições e oportunidades.</div>
+          </div>
+        </div>
+
+        <!-- Creative Strategy -->
+        <div class="tool-card" tabindex="0" role="button" data-category="strategy" data-url="../creative-workflow/?skill=creative-strategy" data-skill="creative-strategy">
+          <div class="card-thumb"><img src="./assets/creative-strategy.png" alt="Creative Strategy" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Strategy">Strategy</span></div>
+            <div class="card-name" data-i18n="Creative Strategy">Creative Strategy</div>
+            <div class="card-desc" data-i18n="Explora possibilidades criativas através de múltiplos ângulos de abordagem.">Explora possibilidades criativas através de múltiplos ângulos de abordagem.</div>
+          </div>
+        </div>
+
+        <!-- Personas Creator -->
+        <div class="tool-card" tabindex="0" role="button" data-category="strategy" data-url="../creative-workflow/?skill=personas-creator" data-skill="personas-creator">
+          <div class="card-thumb"><img src="./assets/personas-creator.png" alt="Personas Creator" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Strategy">Strategy</span></div>
+            <div class="card-name" data-i18n="Personas Creator">Personas Creator</div>
+            <div class="card-desc" data-i18n="Constrói personas conversáveis e multidimensionais, consultáveis em tempo real.">Constrói personas conversáveis e multidimensionais, consultáveis em tempo real.</div>
+          </div>
+        </div>
+
+        <!-- Insights Map -->
+        <div class="tool-card" tabindex="0" role="button" data-category="strategy" data-url="../insights-map/" data-skill="insights-map">
+          <div class="card-thumb" style="background:#f7f7f7;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <svg viewBox="0 0 200 120" style="width:78%;height:78%;display:block;" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <g stroke="#d9d9d9" stroke-width="1" fill="none">
+                <line x1="100" y1="60" x2="40" y2="28"/>
+                <line x1="100" y1="60" x2="40" y2="92"/>
+                <line x1="100" y1="60" x2="160" y2="35"/>
+                <line x1="100" y1="60" x2="160" y2="90"/>
+                <line x1="100" y1="60" x2="100" y2="18"/>
+                <line x1="100" y1="60" x2="100" y2="104"/>
+                <line x1="160" y1="35" x2="180" y2="15"/>
+                <line x1="160" y1="35" x2="186" y2="50"/>
+              </g>
+              <g>
+                <circle cx="100" cy="60" r="13" fill="#111"/>
+                <circle cx="40"  cy="28" r="5" fill="#fff" stroke="#c0c0c0"/>
+                <circle cx="40"  cy="92" r="5" fill="#fff" stroke="#c0c0c0"/>
+                <circle cx="160" cy="35" r="6" fill="#fff" stroke="#111"/>
+                <circle cx="160" cy="90" r="5" fill="#fff" stroke="#c0c0c0"/>
+                <circle cx="100" cy="18" r="5" fill="#fff" stroke="#c0c0c0"/>
+                <circle cx="100" cy="104" r="5" fill="#fff" stroke="#c0c0c0"/>
+                <circle cx="180" cy="15" r="4" fill="#32EE66"/>
+                <circle cx="186" cy="50" r="4" fill="#32EE66"/>
+              </g>
+            </svg>
+          </div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge new" data-i18n="Live">Live</span><span class="card-badge" data-i18n="Strategy">Strategy</span></div>
+            <div class="card-name" data-i18n="Insights Map">Insights Map</div>
+            <div class="card-desc" data-i18n="Mapa mental interativo que destila personas em insights publicitários únicos.">Mapa mental interativo que destila personas em insights publicitários únicos.</div>
+          </div>
+        </div>
+
+        <!-- Persona Editorial -->
+        <div class="tool-card" tabindex="0" role="button" data-category="strategy" data-url="../creative-workflow/?skill=persona-visual" data-skill="persona-visual">
+          <div class="card-thumb"><img src="./assets/personas-editorial.png" alt="Persona Editorial" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge new" data-i18n="Live">Live</span><span class="card-badge" data-i18n="Strategy">Strategy</span></div>
+            <div class="card-name" data-i18n="Persona Editorial">Persona Editorial</div>
+            <div class="card-desc" data-i18n="Ensaio fotográfico da persona: 8 cenas do dia a dia e 4 cenas de objetos.">Ensaio fotográfico da persona: 8 cenas do dia a dia e 4 cenas de objetos.</div>
+          </div>
+        </div>
+
+        <!-- Branded Persona Editorial -->
+        <div class="tool-card" tabindex="0" role="button" data-category="strategy" data-url="../creative-workflow/?skill=photo-scene-gen" data-skill="photo-scene-gen">
+          <div class="card-thumb"><img src="./assets/branded-persona-editorial.png" alt="Branded Persona Editorial" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge new" data-i18n="Live">Live</span><span class="card-badge" data-i18n="Strategy">Strategy</span></div>
+            <div class="card-name" data-i18n="Branded Persona Editorial">Branded Persona Editorial</div>
+            <div class="card-desc" data-i18n="Gera cenas para ensaio fotográfico a partir de personas e guia de marca.">Gera cenas para ensaio fotográfico a partir de personas e guia de marca.</div>
+          </div>
+        </div>
+
+        <!-- Cultural Opportunities -->
+        <div class="tool-card" tabindex="0" role="button" data-category="strategy" data-url="#" data-skill="placeholder">
+          <div class="card-thumb"><img src="./assets/cultural-opportunities.png" alt="Cultural Opportunities" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Strategy">Strategy</span></div>
+            <div class="card-name" data-i18n="Cultural Opportunities">Cultural Opportunities</div>
+            <div class="card-desc" data-i18n="Descobre janelas de participação cultural autêntica e mapeia timing de movimentos.">Descobre janelas de participação cultural autêntica e mapeia timing de movimentos.</div>
+          </div>
+        </div>
+
+        <!-- Communication Journey -->
+        <div class="tool-card" tabindex="0" role="button" data-category="strategy" data-url="../prompt-studio/" data-skill="communication-journey">
+          <div class="card-thumb"><img src="./assets/communication-journey.png" alt="Communication Journey" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Strategy">Strategy</span></div>
+            <div class="card-name" data-i18n="Communication Journey">Communication Journey</div>
+            <div class="card-desc" data-i18n="Mapeia momentos de mídia e gera ideias criativas por touchpoint da persona.">Mapeia momentos de mídia e gera ideias criativas por touchpoint da persona.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATIVE DIRECTION SECTION -->
+    <div class="lib-section">
+      <div class="lib-section-header">
+        <h2 class="lib-section-title"><span class="lib-section-title-highlight" data-i18n="Atrito Criativo:">Atrito Criativo:</span> <span data-i18n="Transformando resistência em pensamento original.">Transformando resistência em pensamento original.</span></h2>
+      </div>
+      <p class="lib-section-description" data-i18n="Desafie limites criativos através de resistência estratégica. Quebra convenções para desbloquear direções inesperadas.">Desafie limites criativos através de resistência estratégica. Quebra convenções para desbloquear direções inesperadas.</p>
+      <div class="featured-row">
+        <!-- Oblique Catalyst -->
+        <div class="tool-card" tabindex="0" role="button" data-category="creative" data-url="#" data-skill="placeholder">
+          <div class="card-thumb"><img src="./assets/oblique-catalyst.png" alt="Oblique Catalyst" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Oblique Catalyst">Oblique Catalyst</div>
+            <div class="card-desc" data-i18n="Radical what-ifs baseados em Brian Eno. Desestabiliza o criativo após a direção.">Radical what-ifs baseados em Brian Eno. Desestabiliza o criativo após a direção.</div>
+          </div>
+        </div>
+
+        <!-- Creative Battle -->
+        <div class="tool-card" tabindex="0" role="button" data-category="creative" data-url="#" data-skill="placeholder">
+          <div class="card-thumb"><img src="./assets/creative-battle.png" alt="Creative Battle" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Creative Battle">Creative Battle</div>
+            <div class="card-desc" data-i18n="5 lentes (Óbvio→Lateral→Invertido→Impossível→Evolutivo) com 5 Art Directors únicos.">5 lentes (Óbvio→Lateral→Invertido→Impossível→Evolutivo) com 5 Art Directors únicos.</div>
+          </div>
+        </div>
+
+        <!-- Moodboard -->
+        <div class="tool-card" tabindex="0" role="button" data-category="creative" data-url="../moodboard/" data-skill="moodboard">
+          <div class="card-thumb"><img src="./assets/moodboard.png" alt="Moodboard" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Moodboard">Moodboard</div>
+            <div class="card-desc" data-i18n="12 interpretações de uma inspiração que o criativo não escolheria conscientemente. Revela sua intuição em camadas.">12 interpretações de uma inspiração que o criativo não escolheria conscientemente. Revela sua intuição em camadas.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATIVE EXECUTION SECTION -->
+    <div class="lib-section">
+      <div class="lib-section-header">
+        <h2 class="lib-section-title"><span class="lib-section-title-highlight" data-i18n="Produção & Copy:">Produção & Copy:</span> <span data-i18n="Do conceito à entrega.">Do conceito à entrega.</span></h2>
+      </div>
+      <p class="lib-section-description" data-i18n="Transforme conceitos em assets totalmente realizados. De voz e narrativa a sistemas visuais e arquivos prontos para produção.">Transforme conceitos em assets totalmente realizados. De voz e narrativa a sistemas visuais e arquivos prontos para produção.</p>
+      <div class="featured-row">
+        <!-- Voice Intelligence -->
+        <div class="tool-card" tabindex="0" role="button" data-category="content" data-url="#" data-skill="placeholder">
+          <div class="card-thumb"><img src="./assets/voice-intelligence.png" alt="Voice Intelligence" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Voice Intelligence">Voice Intelligence</div>
+            <div class="card-desc" data-i18n="Interpreta personalidade da marca em diferentes contextos culturais e emocionais.">Interpreta personalidade da marca em diferentes contextos culturais e emocionais.</div>
+          </div>
+        </div>
+
+        <!-- Story Arc -->
+        <div class="tool-card" tabindex="0" role="button" data-category="creative" data-url="../story-arc/" data-skill="story-arc">
+          <div class="card-thumb"><img src="./assets/story-arc.png" alt="Story Arc" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Story Arc">Story Arc</div>
+            <div class="card-desc" data-i18n="Roteiros publicitários com beats narrativos e arco emocional para múltiplos formatos.">Roteiros publicitários com beats narrativos e arco emocional para múltiplos formatos.</div>
+          </div>
+        </div>
+
+        <!-- Storyboard -->
+        <div class="tool-card" tabindex="0" role="button" data-category="creative" data-url="#" data-skill="placeholder">
+          <div class="card-thumb"><img src="./assets/storyboard.png" alt="Storyboard" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Storyboard">Storyboard</div>
+            <div class="card-desc" data-i18n="Quebra visual de conceitos em frames. Com fotos das personas ou ilustrações.">Quebra visual de conceitos em frames. Com fotos das personas ou ilustrações.</div>
+          </div>
+        </div>
+
+        <!-- Layout Generator -->
+        <div class="tool-card" tabindex="0" role="button" data-category="content" data-url="../layout/" data-skill="layout-generator">
+          <div class="card-thumb"><img src="./assets/layout-generator.png" alt="Layout Generator" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Layout Generator">Layout Generator</div>
+            <div class="card-desc" data-i18n="Sistemas de layout editorial com grid, tipografia e hierarquia visual.">Sistemas de layout editorial com grid, tipografia e hierarquia visual.</div>
+          </div>
+        </div>
+
+        <!-- Illustration DNA -->
+        <div class="tool-card" tabindex="0" role="button" data-category="content" data-url="../illustration-dna/" data-skill="illustration-dna">
+          <div class="card-thumb"><img src="./assets/illustration-dna.png" alt="Illustration DNA" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge new" data-i18n="Live">Live</span><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Illustration DNA">Illustration DNA</div>
+            <div class="card-desc" data-i18n="Extrai o DNA visual de uma referência e constrói um sistema de estilo completo.">Extrai o DNA visual de uma referência e constrói um sistema de estilo completo.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINAL PRODUCTION SECTION -->
+    <div class="lib-section">
+      <div class="lib-section-header">
+        <h2 class="lib-section-title"><span class="lib-section-title-highlight" data-i18n="Conteúdo:">Conteúdo:</span> <span data-i18n="Otimização & escala.">Otimização & escala.</span></h2>
+      </div>
+      <p class="lib-section-description" data-i18n="Otimize assets criativos para cada canal e contexto. Escale a produção e adapte sem perder a integridade da marca.">Otimize assets criativos para cada canal e contexto. Escale a produção e adapte sem perder a integridade da marca.</p>
+      <div class="featured-row">
+        <!-- Mockup Generator -->
+        <div class="tool-card" tabindex="0" role="button" data-category="content" data-url="#" data-skill="placeholder">
+          <div class="card-thumb"><img src="./assets/mockup-gen.png" alt="Mockup Generator" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Creative">Creative</span></div>
+            <div class="card-name" data-i18n="Mockup Generator">Mockup Generator</div>
+            <div class="card-desc" data-i18n="Transforma designs estáticos em aplicações realistas, instantaneamente.">Transforma designs estáticos em aplicações realistas, instantaneamente.</div>
+          </div>
+        </div>
+
+        <!-- Packshots -->
+        <div class="tool-card" tabindex="0" role="button" data-category="content" data-url="#" data-skill="placeholder">
+          <div class="card-thumb"><img src="./assets/packshots.png" alt="Packshots" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block"></div>
+          <div class="card-body">
+            <div class="card-badge-row"><span class="card-badge" data-i18n="Content">Content</span></div>
+            <div class="card-name" data-i18n="Packshots">Packshots</div>
+            <div class="card-desc" data-i18n="Cria imagens de produtos otimizadas para conversão, combinando comportamento de compra.">Cria imagens de produtos otimizadas para conversão, combinando comportamento de compra.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- VIEW: ABOUT -->
+      <div class="about-section">
+        <h2>Sobre o tropicOS</h2>
+        <p>tropicOS nasceu da convicção de que estratégia e criatividade não são processos separados. Eles são faces diferentes da mesma moeda.</p>
+        <p>Nossa plataforma conecta esses dois mundos através de ferramentas que pensam, que desafiam, que inovam. Cada ferramenta foi projetada para ajudar equipes criativas a explorar possibilidades, validar ideias e executar com precisão.</p>
+      </div>
+      <div class="about-section">
+        <h2>As 4 Frentes</h2>
+        <p><strong>Estratégia:</strong> Transforme dados em insights acionáveis. Mapeie territórios, crie personas, explore possibilidades estratégicas.</p>
+        <p><strong>Atrito Criativo:</strong> Desafie limites através da resistência estratégica. Quebra convenções para desbloquear direções inesperadas.</p>
+        <p><strong>Produção & Copy:</strong> Do conceito à entrega. Transforme ideias em assets totalmente realizados com voz e narrativa.</p>
+        <p><strong>Conteúdo & Escala:</strong> Otimize, adapte e escale. Leve suas criações além das limitações de canal e contexto.</p>
+      </div>
+      <div class="about-section">
+        <h2>Filosofia</h2>
+        <p>Acreditamos que as melhores ideias nascem da fricção entre dados e imaginação. tropicOS é o espaço onde essa fricção produz ouro criativo.</p>
+      </div>
+  </main>
+
+  
+
+
+
+
+<script>
+// Setup ao carregar
+window.addEventListener('load', setupAll);
+document.addEventListener('DOMContentLoaded', setupAll);
+
+function setupAll() {
+  setupClicks();
+  setupFilterClickHandlers();
+  // Initialize: show tools view by default
+  showView('tools');
+  // Apply filter from URL if present
+  const urlFilter = new URLSearchParams(window.location.search).get('filter');
+  if (urlFilter) applyFilter(urlFilter);
+  // Restore saved language
+  const savedLang = localStorage.getItem('lang') || 'pt';
+  if (savedLang === 'en') {
+    const btn = document.getElementById('lang-toggle');
+    if (btn) btn.textContent = 'EN';
+    applyTranslations('en');
+  }
+}
+
+function setupClicks() {
+  // Dark mode
+  const darkBtn = document.getElementById('dark-mode-toggle');
+  if (darkBtn) {
+    darkBtn.onclick = function(e) {
+      e.preventDefault();
+      toggleDarkMode();
+      return false;
+    };
+    darkBtn.style.cursor = 'pointer';
+  }
+  
+  // Language
+  const langBtn = document.getElementById('lang-toggle');
+  if (langBtn) {
+    langBtn.onclick = function(e) {
+      e.preventDefault();
+      toggleLanguage();
+      return false;
+    };
+    langBtn.style.cursor = 'pointer';
+  }
+  
+  // Sidebar toggle
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  if (sidebarToggle) {
+    sidebarToggle.onclick = function() {
+      const app = document.getElementById('app');
+      if (app) app.classList.toggle('collapsed');
+      return false;
+    };
+  }
+  
+  // Tool cards
+  document.querySelectorAll('.tool-card').forEach(card => {
+    card.onclick = function() {
+      const url = this.getAttribute('data-url');
+      if (url && url !== '#') {
+        window.open(url, '_blank');
+      }
+      return false;
+    };
+    card.style.cursor = 'pointer';
+  });
+  
+  // Navigation
+  document.querySelectorAll('[data-view-nav]').forEach(link => {
+    link.onclick = function(e) {
+      e.preventDefault();
+      const view = this.getAttribute('data-view-nav');
+      showView(view);
+      return false;
+    };
+  });
+}
+
+function setupFilterClickHandlers() {
+  document.querySelectorAll('[data-filter]').forEach(link => {
+    link.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const filter = this.getAttribute('data-filter');
+      
+      // PRIMEIRO: muda para view de tools (mostra as .lib-section)
+      showView('tools');
+      
+      // DEPOIS: aplica o filtro
+      applyFilter(filter);
+      
+      console.log('Filtro aplicado:', filter);
+      return false;
+    };
+    link.setAttribute('href', 'javascript:void(0)');
+  });
+}
+
+function toggleDarkMode() {
+  const html = document.documentElement;
+  html.classList.toggle('dark-mode');
+  const toggle = document.getElementById('dark-mode-toggle');
+  if (toggle) {
+    toggle.classList.toggle('active');
+  }
+  console.log('Dark mode toggled');
+}
+
+// Dicionário de tradução PT → EN (chave = texto PT original = data-i18n)
+const I18N_EN = {
+  // Sidebar / nav
+  "Estratégia": "Strategy",
+  "Criativo": "Creative",
+  "Conteúdo": "Content",
+  "Fluxos": "Workflows",
+  "Meus Arquivos": "My Files",
+  "Configuração": "Settings",
+  "Buscar ferramentas…": "Search tools…",
+
+  // Section titles
+  "Estratégia:": "Strategy:",
+  "Atrito Criativo:": "Creative Friction:",
+  "Produção & Copy:": "Production & Copy:",
+  "Conteúdo:": "Content:",
+  "Transformando cultura em oportunidade.": "Turning culture into opportunity.",
+  "Transformando resistência em pensamento original.": "Turning resistance into original thinking.",
+  "Do conceito à entrega.": "From concept to delivery.",
+  "Otimização & escala.": "Optimization & scale.",
+
+  // Section descriptions
+  "Descubra novos territórios estratégicos transformando dados frios em narrativas que criam impacto real.": "Discover new strategic territories by turning cold data into narratives that create real impact.",
+  "Desafie limites criativos através de resistência estratégica. Quebra convenções para desbloquear direções inesperadas.": "Challenge creative limits through strategic resistance. Break conventions to unlock unexpected directions.",
+  "Transforme conceitos em assets totalmente realizados. De voz e narrativa a sistemas visuais e arquivos prontos para produção.": "Turn concepts into fully realized assets. From voice and narrative to visual systems and production-ready files.",
+  "Otimize assets criativos para cada canal e contexto. Escale a produção e adapte sem perder a integridade da marca.": "Optimize creative assets for every channel and context. Scale production and adapt without losing brand integrity.",
+
+  // Badges
+  "Strategy": "Strategy",
+  "Creative": "Creative",
+  "Content": "Content",
+  "Live": "Live",
+
+  // Tool names (already EN, kept identical)
+  "Project Mapping": "Project Mapping",
+  "Creative Strategy": "Creative Strategy",
+  "Personas Creator": "Personas Creator",
+  "Persona Editorial": "Persona Editorial",
+  "Branded Persona Editorial": "Branded Persona Editorial",
+  "Cultural Opportunities": "Cultural Opportunities",
+  "Communication Journey": "Communication Journey",
+  "Oblique Catalyst": "Oblique Catalyst",
+  "Creative Battle": "Creative Battle",
+  "Moodboard": "Moodboard",
+  "Voice Intelligence": "Voice Intelligence",
+  "Story Arc": "Story Arc",
+  "Storyboard": "Storyboard",
+  "Layout Generator": "Layout Generator",
+  "Illustration DNA": "Illustration DNA",
+  "Mockup Generator": "Mockup Generator",
+  "Packshots": "Packshots",
+
+  // Tool descriptions
+  "Consolida inputs em mapa estratégico, revela contradições e oportunidades.": "Consolidates inputs into a strategic map, reveals contradictions and opportunities.",
+  "Explora possibilidades criativas através de múltiplos ângulos de abordagem.": "Explores creative possibilities through multiple angles of approach.",
+  "Constrói personas conversáveis e multidimensionais, consultáveis em tempo real.": "Builds conversational, multidimensional personas you can consult in real time.",
+  "Ensaio fotográfico da persona: 8 cenas do dia a dia e 4 cenas de objetos.": "Persona photo essay: 8 daily-life scenes and 4 object scenes.",
+  "Gera cenas para ensaio fotográfico a partir de personas e guia de marca.": "Generates photo shoot scenes from personas and brand guide.",
+  "Descobre janelas de participação cultural autêntica e mapeia timing de movimentos.": "Discovers windows of authentic cultural participation and maps movement timing.",
+  "Mapeia momentos de mídia e gera ideias criativas por touchpoint da persona.": "Maps media moments and generates creative ideas per persona touchpoint.",
+  "Radical what-ifs baseados em Brian Eno. Desestabiliza o criativo após a direção.": "Radical what-ifs inspired by Brian Eno. Destabilizes the creative after direction.",
+  "5 lentes (Óbvio→Lateral→Invertido→Impossível→Evolutivo) com 5 Art Directors únicos.": "5 lenses (Obvious→Lateral→Inverted→Impossible→Evolutionary) with 5 unique Art Directors.",
+  "Interpreta personalidade da marca em diferentes contextos culturais e emocionais.": "Interprets brand personality across different cultural and emotional contexts.",
+  "12 interpretações de uma inspiração que o criativo não escolheria conscientemente. Revela sua intuição em camadas.": "12 interpretations of an inspiration the creative wouldn't pick consciously. Reveals intuition in layers.",
+  "Roteiros publicitários com beats narrativos e arco emocional para múltiplos formatos.": "Advertising scripts with narrative beats and emotional arc for multiple formats.",
+  "Quebra visual de conceitos em frames. Com fotos das personas ou ilustrações.": "Visual breakdown of concepts into frames. With persona photos or illustrations.",
+  "Sistemas de layout editorial com grid, tipografia e hierarquia visual.": "Editorial layout systems with grid, typography and visual hierarchy.",
+  "Extrai o DNA visual de uma referência e constrói um sistema de estilo completo.": "Extracts the visual DNA of a reference and builds a complete style system.",
+  "Transforma designs estáticos em aplicações realistas, instantaneamente.": "Transforms static designs into realistic applications, instantly.",
+  "Cria imagens de produtos otimizadas para conversão, combinando comportamento de compra.": "Creates product images optimized for conversion, combining purchase behavior."
+};
+
+function applyTranslations(lang) {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const ptKey = el.getAttribute('data-i18n');
+    // Salvar texto PT original na primeira execução
+    if (!el.hasAttribute('data-i18n-pt')) {
+      el.setAttribute('data-i18n-pt', el.textContent);
+    }
+    if (lang === 'en') {
+      const en = I18N_EN[ptKey];
+      if (en) el.textContent = en;
+    } else {
+      // Restaurar PT original
+      el.textContent = el.getAttribute('data-i18n-pt') || ptKey;
+    }
+  });
+  // Placeholder do search
+  const search = document.querySelector('input[type="search"], .topbar input');
+  if (search) {
+    search.placeholder = lang === 'en' ? 'Search tools…' : 'Buscar ferramentas…';
+  }
+  document.documentElement.setAttribute('lang', lang);
+  localStorage.setItem('lang', lang);
+}
+
+function toggleLanguage() {
+  const btn = document.getElementById('lang-toggle');
+  if (!btn) return;
+  const current = btn.textContent.trim();
+  const next = current === 'PT' ? 'EN' : 'PT';
+  btn.textContent = next;
+  applyTranslations(next.toLowerCase());
+  console.log('Language toggled to', next);
+}
+
+function applyFilter(filter) {
+  console.log('Applying filter:', filter);
+  const cat = (!filter || filter === 'all' || filter === 'todos') ? null : filter;
+
+  // Update sidebar nav active state
+  document.querySelectorAll('.nav-link[data-filter]').forEach(link => {
+    link.classList.toggle('active', link.dataset.filter === cat);
+  });
+
+  // Show/hide cards (use '' to restore natural CSS display)
+  document.querySelectorAll('[data-category]').forEach(card => {
+    if (filter === 'my-files') {
+      card.style.display = 'none';
+    } else {
+      card.style.display = (!cat || card.dataset.category === cat) ? '' : 'none';
+    }
+  });
+
+  // Show/hide entire lib-sections based on whether they have visible cards
+  document.querySelectorAll('.lib-section').forEach(section => {
+    const cards = section.querySelectorAll('[data-category]');
+    if (cards.length === 0) return;
+    const hasVisible = [...cards].some(c => c.style.display !== 'none');
+    section.style.display = hasVisible ? '' : 'none';
+  });
+}
+
+function showView(view) {
+  // Show/hide top-level views
+  document.querySelectorAll('.home-hero').forEach(el => el.style.display = (view === 'home') ? '' : 'none');
+  document.querySelectorAll('.about-section').forEach(el => el.style.display = (view === 'about') ? '' : 'none');
+  document.querySelectorAll('.lib-section').forEach(el => el.style.display = (view === 'tools') ? '' : 'none');
+  console.log('View changed to:', view);
+}
+
+console.log('✅ Script loaded with onclick handlers');
+</script>
+</body>
+</html>
