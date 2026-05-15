@@ -2,7 +2,7 @@
 
 Coleção de ferramentas criativas servidas via GitHub Pages.
 
-**Live:** https://fasimoes71.github.io/tropicOS/
+**Live:** https://fasimoes71.github.io/tropicos-k8m2/
 
 ## Tools
 
